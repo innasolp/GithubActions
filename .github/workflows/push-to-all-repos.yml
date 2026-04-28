@@ -25,7 +25,7 @@ jobs:
 
       - name: Process all repositories
         env:
-          GH_TOKEN: ${{ secrets.MY_PAT_TOKEN }} # Токен для чтения списка репозиториев и пуша
+          GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }} 
           PUSH_DEFAULT: ${{ github.event.inputs.push_to_default }}
           PUSH_DEVELOP: ${{ github.event.inputs.push_to_develop }}
         run: |
