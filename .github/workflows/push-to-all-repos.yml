@@ -40,7 +40,7 @@ jobs:
           git config --global user.email "github-actions[bot]@://github.com"
 
           # Получаем список всех репозиториев аккаунта (кроме текущего центрального, замените my-central-repo на ваше имя)
-          repos=$(gh repo list --limit 1000 --json name -q '.[].name' | grep -v "my-central-repo")
+          repos=["Alchemist", "WebLoaders", "Messages", "Import", "LogExtensions", "DependencyInjection", "HttpExtensions", "Configuration", "GrpcExtension", "Json.CustomSerialization"]
 
           for repo in $repos; do
             echo "--------------------------------------------------"
