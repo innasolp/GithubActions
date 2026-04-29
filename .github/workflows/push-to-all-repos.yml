@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       push_to_default:
-        description: 'Пушить в дефолтную ветку (main/master)'
+        description: 'Push to default branch (main/master)'
         type: boolean
         default: true
       push_to_develop:
-        description: 'Пушить в ветку develop (если существует)'
+        description: 'Push to develop (if exists)'
         type: boolean
         default: false
       action_yaml:
@@ -28,29 +28,26 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }} 
           PUSH_DEFAULT: ${{ github.event.inputs.push_to_default }}
           PUSH_DEVELOP: ${{ github.event.inputs.push_to_develop }}
-        run: |
-          # Валидация: хотя бы один флаг должен быть true
+        run: |         
           if [ "$PUSH_DEFAULT" != "true" ] && [ "$PUSH_DEVELOP" != "true" ]; then
-            echo "❌ Ошибка: Вы должны выбрать хотя бы одну ветку для пуша!"
+            echo "❌ Error: No branch for push."
             exit 1
           fi
 
-          # Настройка глобального пользователя Git
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@://github.com"
 
-          # Получаем список всех репозиториев аккаунта (кроме текущего центрального, замените my-central-repo на ваше имя)
-          repos=["Alchemist", "WebLoaders", "Messages", "Import", "LogExtensions", "DependencyInjection", "HttpExtensions", "Configuration", "GrpcExtension", "Json.CustomSerialization"]
+          git config --global url."https://x-access-token:${{ secrets.REPO_ACTION_TOKEN }}@github.com/".insteadOf "https://github.com"
+          
+          repos=("Alchemist" "WebLoaders" "Messages" "Import" "LogExtensions" "DependencyInjection" "HttpExtensions" "Configuration" "GrpcExtension" "Json.CustomSerialization")
 
-          for repo in $repos; do
+          for repo in "${repos[@]}"; do
             echo "--------------------------------------------------"
-            echo "🛠️ Обработка репозитория: $repo"
+            echo "🛠️ Repository: $repo"
 
-            # Клонируем целевой репозиторий через PAT
-            gh repo clone "$repo" "temp-$repo" || { echo "❌ Не удалось клонировать $repo"; continue; }
+            gh repo clone "$repo" "temp-$repo" || { echo "❌ Cloning $repo failed"; continue; }
             cd "temp-$repo"
 
-            # 1. Скрываем workflows из code review через .gitattributes
             attr_rule=".github/workflows/** linguist-generated=true"
             if [ -f .gitattributes ]; then
               if ! grep -qsF "$attr_rule" .gitattributes; then
@@ -60,54 +57,45 @@ jobs:
               echo "$attr_rule" > .gitattributes
             fi
 
-            # 2. Создаем папку и копируем туда файл нашего экшена
             mkdir -p .github/workflows
             cp ../.github/workflows/${{ github.event.inputs.action_yaml }} .github/workflows/${{ github.event.inputs.action_yaml }}
 
-            # 3. Определяем дефолтную ветку
             default_branch=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
-            echo "📍 Дефолтная ветка: $default_branch"
+            echo "📍 Default branch: $default_branch"
 
-            # 4. Проверяем наличие ветки develop
             has_develop=$(git branch -r | grep "origin/develop$")
 
-            # Фиксируем изменения локально
             git add .gitattributes .github/workflows/${{ github.event.inputs.action_yaml }}
             
-            # Проверяем, есть ли вообще изменения
             if [ -n "$(git status --porcelain)" ]; then
-              git commit -m "chore: distribute global action and hide it from PR review"
+              git commit -m "chore: distribute global action and hide it from agents"
               
-              # ПУШ В ДЕФОЛТНУЮ ВЕТКУ
               if [ "$PUSH_DEFAULT" == "true" ]; then
                 git push origin "$default_branch"
-                echo "🚀 Успешно отправлено в $default_branch"
+                echo "🚀 Pushing to $default_branch  completed successfully."
               fi
 
-              # ПУШ В DEVELOP
               if [ "$PUSH_DEVELOP" == "true" ]; then
                 if [ -n "$has_develop" ]; then
                   git fetch origin develop
                   git checkout develop
-                  # Вливаем коммит из дефолтной ветки в develop
                   if git merge "$default_branch" -m "chore: merge action from $default_branch"; then
                     git push origin develop
-                    echo "🚀 Успешно отправлено в develop"
+                    echo "🚀 Pushing to develop completed successfully"
                   else
-                    echo "❌ Конфликт при мердже в develop! Пропускаем."
+                    echo "❌ Merge into develop failed! Continued."
                     git merge --abort
                   fi
                 else
-                  echo "ℹ️ Ветка develop не найдена в этом репозитории. Пропуск."
+                  echo "ℹ️ Branch develop not found. Skipped."
                 fi
               fi
             else
-              echo "ℹ️ Изменений нет. Файлы уже актуальны."
+              echo "ℹ️ No changes, all files are actual."
             fi
 
-            # Очистка директории перед следующим репозиторием
             cd ..
             rm -rf "temp-$repo"
           done
 
-          echo "🎉 Все репозитории успешно обработаны!"
+          echo "🎉 All repoitories handled successfully."
