@@ -1,9 +1,22 @@
- name: Push Action to All Repos
+name: Push Action to All Repos
 
- on:
+on:
   workflow_dispatch:
+    inputs:
+      push_to_default:
+        description: 'Push to default branch (main/master)'
+        type: boolean
+        default: true
+      push_to_develop:
+        description: 'Push to develop (if exists)'
+        type: boolean
+        default: false
+      action_yaml:
+        description: 'github action file'
+        type: string
+        required: true
 
- jobs:
+jobs:
   distribute-action:
     runs-on: ubuntu-latest
     steps:
@@ -11,5 +24,78 @@
         uses: actions/checkout@v4
 
       - name: Process all repositories
-        run: |
-          echo "🎉 action!"
+        env:
+          GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }} 
+          PUSH_DEFAULT: ${{ github.event.inputs.push_to_default }}
+          PUSH_DEVELOP: ${{ github.event.inputs.push_to_develop }}
+        run: |         
+          if [ "$PUSH_DEFAULT" != "true" ] && [ "$PUSH_DEVELOP" != "true" ]; then
+            echo "❌ Error: No branch for push."
+            exit 1
+          fi
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@://github.com"
+
+          git config --global url."https://x-access-token:${{ secrets.REPO_ACTION_TOKEN }}@github.com/".insteadOf "https://github.com"
+          
+          repos=("Alchemist" "WebLoaders" "Messages" "Import" "LogExtensions" "DependencyInjection" "HttpExtensions" "Configuration" "GrpcExtension" "Json.CustomSerialization")
+
+          for repo in "${repos[@]}"; do
+            echo "--------------------------------------------------"
+            echo "🛠️ Repository: $repo"
+
+            gh repo clone "$repo" "temp-$repo" || { echo "❌ Cloning $repo failed"; continue; }
+            cd "temp-$repo"
+
+            attr_rule=".github/workflows/** linguist-generated=true"
+            if [ -f .gitattributes ]; then
+              if ! grep -qsF "$attr_rule" .gitattributes; then
+                echo "$attr_rule" >> .gitattributes
+              fi
+            else
+              echo "$attr_rule" > .gitattributes
+            fi
+
+            mkdir -p .github/workflows
+            cp ../.github/workflows/${{ github.event.inputs.action_yaml }} .github/workflows/${{ github.event.inputs.action_yaml }}
+
+            default_branch=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
+            echo "📍 Default branch: $default_branch"
+
+            has_develop=$(git branch -r | grep "origin/develop$")
+
+            git add .gitattributes .github/workflows/${{ github.event.inputs.action_yaml }}
+            
+            if [ -n "$(git status --porcelain)" ]; then
+              git commit -m "chore: distribute global action and hide it from agents"
+              
+              if [ "$PUSH_DEFAULT" == "true" ]; then
+                git push origin "$default_branch"
+                echo "🚀 Pushing to $default_branch  completed successfully."
+              fi
+
+              if [ "$PUSH_DEVELOP" == "true" ]; then
+                if [ -n "$has_develop" ]; then
+                  git fetch origin develop
+                  git checkout develop
+                  if git merge "$default_branch" -m "chore: merge action from $default_branch"; then
+                    git push origin develop
+                    echo "🚀 Pushing to develop completed successfully"
+                  else
+                    echo "❌ Merge into develop failed! Continued."
+                    git merge --abort
+                  fi
+                else
+                  echo "ℹ️ Branch develop not found. Skipped."
+                fi
+              fi
+            else
+              echo "ℹ️ No changes, all files are actual."
+            fi
+
+            cd ..
+            rm -rf "temp-$repo"
+          done
+
+          echo "🎉 All repoitories handled successfully."
