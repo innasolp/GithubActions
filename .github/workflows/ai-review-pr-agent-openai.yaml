@@ -1,32 +1,44 @@
-name: AI Code Review Codium PR-agent LLama (via Tailscale)
+name: AI Code Review Codium PR-agent OpenAi api (via Tailscale)
 
 on:
-  workflow_dispatch: 
+  workflow_call: 
     inputs:
       pr_number:
         description: 'Input pull request number'
         required: true
         type: string
+      api:
+        description: 'Input api'
+        required: true
+        type: string  
       model_name:
-        description: 'Select Ollama model'
+        description: 'Select model'
         required: true
         default: 'qwen2.5-coder:14b'
-        type: choice
-        options:
-          - 'qwen2.5-coder:14b'
-          - 'qwen2.5-coder:7b' 
-          - 'qwen2.5-coder:3b'  
+        type: string  
       language:
         description: 'Select response language'
         required: true
         default: 'English'
-        type: choice
-        options:
-          - 'English'
-          - 'Russian'
+        type: string
   
 jobs:
+
+  get_api:     
+        runs-on: ubuntu-latest
+        outputs: 
+            api_url: ${{ steps.get_api_step.outputs.result }}        
+        steps:
+          - id: get_api_step
+            run: |
+              if [ ${{ github.event.inputs.api }}=="OpenRouter" ]; then
+                echo "result=${{ secrets.OPENROUTER_ENDPOINT }}" >> $GITHUB_OUTPUT
+              else if [ ${{ github.event.inputs.api }}=="Llama" ]; then
+                echo "result=${{ secrets.LLAMA_ENDPOINT }}" >> $GITHUB_OUTPUT
+              fi
+
   review:
+    needs: get_api
     runs-on: ubuntu-latest
     permissions: # Добавьте этот блок
       contents: read
@@ -80,20 +92,20 @@ jobs:
             echo "has_diff=false" >> $GITHUB_OUTPUT
             echo "No changes detected."
           fi
-
-      - name: Connect to llama
+          
+      - name: Connect to api
         run: |
           tailscale status
           # Пробуем просто достучаться до API
-          curl -v --connect-timeout 10 ${{ secrets.OLLAMA_QWEN_7B_ENDPOINT }}/models
+          curl -v --connect-timeout 10 ${{ needs.get_api.outputs.api_url }}
 
-      - name: Checking model in llama.cpp
+      - name: Checking model in api
         run: |
             SEARCH_STRING=$(echo "${{ github.event.inputs.model_name }}" | sed 's/:/-/g')
-            if curl -s ${{ secrets.OLLAMA_QWEN_7B_ENDPOINT }}/props | grep -qi "$SEARCH_STRING"; then
+            if curl -s ${{ needs.get_api.outputs.api_url }}/api | grep -qi "$SEARCH_STRING"; then
               echo "✅ Model ${{ github.event.inputs.model_name }} loaded successfully."
             else
-              echo "❌ Error: Model ${{ github.event.inputs.model_name }} not found in llama.cpp!"
+              echo "❌ Error: Model ${{ github.event.inputs.model_name }} not found in api!"
               exit 1
             fi  
           
@@ -108,7 +120,7 @@ jobs:
             -e CONFIG__MODEL="openai/${{ github.event.inputs.model_name }}" \
             -e CONFIG__AI_TIMEOUT="1200" \
             -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=${{ secrets.OLLAMA_QWEN_7B_ENDPOINT }} \
+            -e OPENAI__API_BASE=${{ needs.get_api.outputs.api_url }} \
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ github.event.inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
@@ -125,7 +137,7 @@ jobs:
             -e CONFIG__MODEL="openai/${{ github.event.inputs.model_name }}" \
             -e CONFIG__AI_TIMEOUT="1200" \
             -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=${{ secrets.OLLAMA_QWEN_7B_ENDPOINT }} \
+            -e OPENAI__API_BASE=${{ needs.get_api.outputs.api_url }} \
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ github.event.inputs.language }} language."       
