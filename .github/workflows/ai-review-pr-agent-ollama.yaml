@@ -21,7 +21,7 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
-    permissions: # Добавьте этот блок
+    permissions:
       contents: read
       pull-requests: write
     steps:
@@ -47,11 +47,8 @@ jobs:
       - name: Get git diff
         id: diff_step
         run: |
-          # 1. Автоматически определяем дефолтную ветку репозитория (если это не PR)
-          # Используем API или просто берем ту, куда указывает репозиторий
           DEFAULT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
           
-          # 2. Определяем базовую ветку для сравнения
           BASE_BRANCH="${{ github.base_ref }}"
           if [ -z "$BASE_BRANCH" ]; then
             BASE_BRANCH=$DEFAULT_BRANCH
@@ -59,13 +56,10 @@ jobs:
           
           echo "Base branch is determined as: $BASE_BRANCH"
           
-          # 3. Подтягиваем базовую ветку, чтобы git её увидел
           git fetch origin $BASE_BRANCH --depth=100
           
-          # 4. Выполняем сравнение
           git diff origin/$BASE_BRANCH HEAD -- . ':(exclude)*.lock' > diff.txt
           
-          # 5. Выводим результат для следующих шагов
           if [ -s diff.txt ]; then
             echo "has_diff=true" >> $GITHUB_OUTPUT
             echo "Changes found."
@@ -77,14 +71,11 @@ jobs:
       - name: Network Diagnostic
         run: |
           tailscale status
-          # Пробуем просто достучаться до API
           curl -v --connect-timeout 10 ${{ secrets.OLLAMA_ENDPOINT }}/api/tags  
-          # пробуем отправить небольшой файл через POST
           TEST_RESPONSE=$(curl -X POST -d '{"model":${{ github.event.inputs.model_name }},"prompt":"hi", "stream": false}' ${{ secrets.OLLAMA_QWEN_7B_ENDPOINT }}/api/generate)
           echo "Test response on 'hi' from Ollama: $TEST_RESPONSE"
 
           
-      # Шаг 1: Изменения и описание
       - name: PR Agent - Description & Changes
         run: |
           docker run --rm \
@@ -99,8 +90,7 @@ jobs:
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ github.event.inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
-
-       # Шаг 2: Анализ кода на ошибки
+     
       - name: PR Agent - Bug Analysis
         run: |
           docker run --rm \
