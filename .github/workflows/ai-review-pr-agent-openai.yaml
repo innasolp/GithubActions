@@ -20,57 +20,28 @@ on:
         description: 'Select response language'
         required: true
         default: 'English'
-        type: string
+        type: string  
   
-jobs:
-
-  get_api:     
-        runs-on: ubuntu-latest
-        outputs: 
-            api_url: ${{ steps.get_api_step.outputs.result }}        
-        steps:
-          - id: get_api_step
-            run: |
-              if [ ${{ github.event.inputs.api }}=="OpenRouter" ]; then
-                echo "result=${{ secrets.OPENROUTER_ENDPOINT }}" >> $GITHUB_OUTPUT
-              else if [ ${{ github.event.inputs.api }}=="Llama" ]; then
-                echo "result=${{ secrets.LLAMA_ENDPOINT }}" >> $GITHUB_OUTPUT
-              fi
-
+jobs:  
+          
   review:
-    needs: get_api
     runs-on: ubuntu-latest
-    permissions: # Добавьте этот блок
+    permissions:
       contents: read
       pull-requests: write
+      actions: write
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Check secrets availability
-        run: |
-          if [ -z "${{ secrets.TS_OAUTH_CLIENT_ID }}" ]; then
-            echo "Secret is EMPTY"
-            exit 1
-          fi    
-
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v2
-        with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}         
-          tags: tag:ci
-
+          
       - name: Get git diff
         id: diff_step
         run: |
-          # 1. Автоматически определяем дефолтную ветку репозитория (если это не PR)
-          # Используем API или просто берем ту, куда указывает репозиторий
           DEFAULT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
           
-          # 2. Определяем базовую ветку для сравнения
           BASE_BRANCH="${{ github.base_ref }}"
           if [ -z "$BASE_BRANCH" ]; then
             BASE_BRANCH=$DEFAULT_BRANCH
@@ -78,13 +49,10 @@ jobs:
           
           echo "Base branch is determined as: $BASE_BRANCH"
           
-          # 3. Подтягиваем базовую ветку, чтобы git её увидел
           git fetch origin $BASE_BRANCH --depth=100
           
-          # 4. Выполняем сравнение
           git diff origin/$BASE_BRANCH HEAD -- . ':(exclude)*.lock' > diff.txt
           
-          # 5. Выводим результат для следующих шагов
           if [ -s diff.txt ]; then
             echo "has_diff=true" >> $GITHUB_OUTPUT
             echo "Changes found."
@@ -93,23 +61,33 @@ jobs:
             echo "No changes detected."
           fi
           
-      - name: Connect to api
+      - name: Prepare API
+        id: get_api_step
         run: |
-          tailscale status
-          # Пробуем просто достучаться до API
-          curl -v --connect-timeout 10 ${{ needs.get_api.outputs.api_url }}
-
-      - name: Checking model in api
-        run: |
-            SEARCH_STRING=$(echo "${{ github.event.inputs.model_name }}" | sed 's/:/-/g')
-            if curl -s ${{ needs.get_api.outputs.api_url }}/api | grep -qi "$SEARCH_STRING"; then
-              echo "✅ Model ${{ github.event.inputs.model_name }} loaded successfully."
-            else
-              echo "❌ Error: Model ${{ github.event.inputs.model_name }} not found in api!"
-              exit 1
-            fi  
+          if [ "${{ inputs.api }}" = "OpenRouter" ]; then 
+            val="${{ secrets.OPENROUTER_ENDPOINT }}"
+          elif [ "${{ inputs.api }}" = "Llama" ]; then
+            val="${{ secrets.LLAMA_ENDPOINT }}"
+            
+            gh workflow run llama-check-model.yaml \
+              --repo innasolp/GithubActions \
+              --ref main \
+              -f model_name="${{ inputs.model_name }}"
+          fi
           
-      # Шаг 1: Изменения и описание
+          echo "API_URL=$val" >> $GITHUB_ENV
+          echo "Selected API: $val"
+        env:
+          GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }}
+
+      - name: Connect to Tailscale
+        if: inputs.api == 'Llama'
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci    
+          
       - name: PR Agent - Description & Changes
         run: |
           docker run --rm \
@@ -117,16 +95,15 @@ jobs:
             -v ${{ github.workspace }}:/github/workspace \
             -w /app \
             -e GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e CONFIG__MODEL="openai/${{ github.event.inputs.model_name }}" \
+            -e CONFIG__MODEL="openai/${{ inputs.model_name }}" \
             -e CONFIG__AI_TIMEOUT="1200" \
             -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=${{ needs.get_api.outputs.api_url }} \
+            -e OPENAI__API_BASE=$API_URL \
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
-            ask "In ${{ github.event.inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
+            ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
 
-
-       # Шаг 2: Анализ кода на ошибки
+       
       - name: PR Agent - Bug Analysis
         run: |
           docker run --rm \
@@ -134,10 +111,10 @@ jobs:
             -v ${{ github.workspace }}:/github/workspace \
             -w /app \
             -e GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e CONFIG__MODEL="openai/${{ github.event.inputs.model_name }}" \
+            -e CONFIG__MODEL="openai/${{ inputs.model_name }}" \
             -e CONFIG__AI_TIMEOUT="1200" \
             -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=${{ needs.get_api.outputs.api_url }} \
+            -e OPENAI__API_BASE=$API_URL \
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
-            ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ github.event.inputs.language }} language."       
+            ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."       
