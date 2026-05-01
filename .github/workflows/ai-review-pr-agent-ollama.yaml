@@ -1,4 +1,4 @@
-name: AI Code Review Codium PR-agent OpenAi api (via Tailscale)
+name: AI Code Review Codium PR-agent Ollama (via Tailscale)
 
 on:
   workflow_call: 
@@ -7,36 +7,43 @@ on:
         description: 'Input pull request number'
         required: true
         type: string
-      api:
-        description: 'Input api'
-        required: true
-        type: string  
       model_name:
-        description: 'Select model'
+        description: 'Select Ollama model'
         required: true
         default: 'qwen2.5-coder:14b'
-        type: string  
+        type: string
       language:
         description: 'Select response language'
         required: true
         default: 'English'
-        type: string  
+        type: string
   
-jobs:  
-          
+jobs:
   review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
-      actions: write
-      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
+      - name: Check secrets availability
+        run: |
+          if [ -z "${{ secrets.TS_OAUTH_CLIENT_ID }}" ]; then
+            echo "Secret is EMPTY"
+            exit 1
+          fi    
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}         
+          tags: tag:ci
+
       - name: Get git diff
         id: diff_step
         run: |
@@ -60,33 +67,14 @@ jobs:
             echo "has_diff=false" >> $GITHUB_OUTPUT
             echo "No changes detected."
           fi
-          
-      - name: Prepare API
-        id: get_api_step
-        run: |
-          if [ "${{ inputs.api }}" = "OpenRouter" ]; then 
-            val="${{ secrets.OPENROUTER_ENDPOINT }}"
-          elif [ "${{ inputs.api }}" = "Llama" ]; then
-            val="${{ secrets.LLAMA_ENDPOINT }}"
-            
-            gh workflow run llama-check-model.yaml \
-              --repo innasolp/GithubActions \
-              --ref main \
-              -f model_name="${{ inputs.model_name }}"
-          fi
-          
-          echo "API_URL=$val" >> $GITHUB_ENV
-          echo "Selected API: $val"
-        env:
-          GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }}
 
-      - name: Connect to Tailscale
-        if: inputs.api == 'Llama'
-        uses: tailscale/github-action@v2
-        with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:ci    
+      - name: Network Diagnostic
+        run: |
+          tailscale status
+          curl -v --connect-timeout 10 ${{ secrets.OLLAMA_ENDPOINT }}/api/tags  
+          TEST_RESPONSE=$(curl -X POST -d '{"model":${{ github.event.inputs.model_name }},"prompt":"hi", "stream": false}' ${{ secrets.OLLAMA_QWEN_7B_ENDPOINT }}/api/generate)
+          echo "Test response on 'hi' from Ollama: $TEST_RESPONSE"
+
           
       - name: PR Agent - Description & Changes
         run: |
@@ -95,15 +83,14 @@ jobs:
             -v ${{ github.workspace }}:/github/workspace \
             -w /app \
             -e GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e CONFIG__MODEL="openai/${{ inputs.model_name }}" \
+            -e CONFIG__MODEL="ollama/${{ github.event.inputs.model_name }}" \
             -e CONFIG__AI_TIMEOUT="1200" \
-            -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=$API_URL \
+            -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="32000" \
+            -e OLLAMA__API_BASE="${{ secrets.OLLAMA_ENDPOINT }}" \
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
-            ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
-
-       
+            ask "In ${{ github.event.inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
+     
       - name: PR Agent - Bug Analysis
         run: |
           docker run --rm \
@@ -111,10 +98,10 @@ jobs:
             -v ${{ github.workspace }}:/github/workspace \
             -w /app \
             -e GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e CONFIG__MODEL="openai/${{ inputs.model_name }}" \
+            -e CONFIG__MODEL="ollama/${{ github.event.inputs.model_name }}" \
             -e CONFIG__AI_TIMEOUT="1200" \
-            -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=$API_URL \
+            -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="32000" \
+            -e OLLAMA__API_BASE="${{ secrets.OLLAMA_ENDPOINT }}" \
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
-            ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."       
+            ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ github.event.inputs.language }} language."       
