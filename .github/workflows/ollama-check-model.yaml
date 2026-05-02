@@ -1,0 +1,55 @@
+name: Ollama API check model
+
+on:
+  workflow_call: 
+    inputs:      
+      model_name:
+        description: 'Select model'
+        required: true        
+        type: string
+        
+  workflow_dispatch: 
+    inputs:
+      model_name:
+        description: 'Model name'
+        required: true
+        type: string     
+
+jobs:  
+
+  check-model:
+    runs-on: ubuntu-latest
+    permissions: 
+      contents: read
+      pull-requests: write
+    steps:
+
+      - name: Check secrets availability
+        run: |
+          if [ -z "${{ secrets.TS_OAUTH_CLIENT_ID }}" ]; then
+            echo "Secret is EMPTY"
+            exit 1
+          fi    
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}         
+          tags: tag:ci
+    
+      - name: Connect to api
+        run: |
+          tailscale status
+          echo "connecting to API"
+          curl -v --connect-timeout 10 "${{ secrets.OLLAMA_ENDPOINT }}"
+          
+      - name: Check model via curl
+        run: |  
+          SEARCH_STRING=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
+          if curl -s "${{ secrets.OLLAMA_ENDPOINT }}/api/tags" | grep -qi "$SEARCH_STRING"; then
+            echo "✅ Model ${{ inputs.model_name }} loaded successfully."
+          else
+            echo "❌ Error: Model ${{ inputs.model_name }} not found in api!"
+            exit 1
+          fi     
