@@ -1,0 +1,94 @@
+name: X AI Review by nikita filonov
+
+on:
+  workflow_call:
+    inputs:
+      review-command:
+        type: string
+        default: 'run'
+      pull-request-number:
+        type: string
+        required: true
+      provider:
+        description: 'Input provider'
+        required: true
+        type: string
+        default: 'LLAMA'
+      model_name:
+        description: 'Select model'
+        required: true
+        default: 'qwen2.5-coder:14b'
+        type: string    
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Prepare API
+        id: get_api_step
+        run: |
+          if [ "${{ inputs.provider }}" = "OPENROUTER" ]; then 
+            val="${{ secrets.OPENROUTER_ENDPOINT }}"
+            llm='OPENAI'
+            # --todo
+            token="not-needed-for-local"
+          elif [ "${{ inputs.provider }}" = "LLAMA" ]; then
+            val="${{ secrets.LLAMA_ENDPOINT }}"
+            llm='OPENAI'
+            token="not-needed-for-local"
+            gh workflow run llama-check-model.yaml \
+              --repo innasolp/GithubActions \
+              --ref main \
+              -f model_name="${{ inputs.model_name }}"
+            
+          elif [ "${{ inputs.provider }}" = "OLLAMA" ]; then
+            val="${{ secrets.LLAMA_ENDPOINT }}"
+            llm='OLLAMA'
+            token="not-needed-for-local"
+            gh workflow run ollama-check-model.yaml \
+              --repo innasolp/GithubActions \
+              --ref main \
+              -f model_name="${{ inputs.model_name }}"
+          fi
+          
+          echo "api_url=$val" >> $GITHUB_OUTPUT
+          echo "llm_provider=$llm" >> $GITHUB_OUTPUT
+          echo "api_token=$token" >> $GITHUB_OUTPUT
+          
+          echo "Selected API: $val"
+          echo "Provider: $llm"
+        env:
+          GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }}      
+
+      - name: Connect to Tailscale
+        if: inputs.provider == 'LLAMA' || inputs.provider == 'OLLAMA'
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci      
+
+      - uses: Nikita-Filonov/ai-review@v0.64.0
+        env:
+          # --- LLM configuration ---
+          LLM__PROVIDER: ${{ steps.get_api_step.outputs.llm_provider }}
+          LLM__META__MODEL: ${{ inputs.model_name }}
+          LLM__META__MAX_TOKENS: "16384"
+          LLM__META__TEMPERATURE: "0.3"
+          LLM__HTTP_CLIENT__API_URL: ${{ steps.get_api_step.outputs.api_url }}
+          LLM__HTTP_CLIENT__TIMEOUT: 600
+          LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
+
+          # --- GitHub integration ---
+          VCS__PROVIDER: "GITHUB"
+          VCS__PIPELINE__OWNER: ${{ github.repository_owner }}
+          VCS__PIPELINE__REPO: ${{ github.event.repository.name }}
+          VCS__PIPELINE__PULL_NUMBER: ${{ inputs.pull-request-number }}
+          VCS__HTTP_CLIENT__API_URL: "https://api.github.com"
+          VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+        with:
+          review-command: ${{ inputs.review-command }}
