@@ -88,53 +88,55 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci    
           
+      - name: Install PR-Agent natively
+        run: |
+          pip install pr-agent
+
       - name: PR Agent - Description & Changes
         run: |
-          docker run --rm \
-            --network=host \
-            -v ${{ github.workspace }}:/github/workspace \
-            -w /app \
-            -e GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e CONFIG__MODEL="openai/${{ inputs.model_name }}" \
-            -e CONFIG__AI_TIMEOUT="1200" \
-            -e CONFIG__CUSTOM_MODEL_MAX_CONTEXT_TOKENS="32000" \
-            -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=$API_URL \
-            -e HTTP_PROXY="" \
-            -e HTTPS_PROXY="" \
-            -e http_proxy="" \
-            -e https_proxy="" \
-            -e NO_PROXY="localhost,127.0.0.1,100.*" \
-            -e no_proxy="localhost,127.0.0.1,100.*" \
-            -e CONFIG__FALLBACK_MODELS="[]" \
-            -e OPENAI__FALLBACK_MODELS="[]" \
-            -e LITELM__FALLBACK_MODELS="[]" \
-            codiumai/pr-agent:latest \
-            --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
+          # Конфигурация для CLI-версии (напрямую на хосте раннера)
+          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          export OPENAI__API_BASE="$API_URL"
+          export OPENAI__API_KEY="dummy-key-for-local"
+          export CONFIG__MODEL="openai/${{ inputs.model_name }}"
+          export CONFIG__AI_TIMEOUT="1200"
+          export CONFIG__CUSTOM_MODEL_MAX_CONTEXT_TOKENS="32000"
+          export CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000"
+          export CONFIG__FALLBACK_MODELS="[]"
+          export OPENAI__FALLBACK_MODELS="[]"
+          export LITELM__FALLBACK_MODELS="[]"
+          
+          # Очищаем прокси самого раннера, чтобы трафик уходил в Tailscale
+          export HTTP_PROXY=""
+          export HTTPS_PROXY=""
+          export http_proxy=""
+          export https_proxy=""
+          export NO_PROXY="localhost,127.0.0.1,100.*"
+          export no_proxy="localhost,127.0.0.1,100.*"
+          
+          # Запуск CLI-команды напрямую в сети, где поднят Tailscale
+          pr-agent --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
-
        
       - name: PR Agent - Bug Analysis
         run: |
-          docker run --rm \
-            --network=host \
-            -v ${{ github.workspace }}:/github/workspace \
-            -w /app \
-            -e GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e CONFIG__MODEL="openai/${{ inputs.model_name }}" \
-            -e CONFIG__AI_TIMEOUT="1200" \
-            -e CONFIG__CUSTOM_MODEL_MAX_CONTEXT_TOKENS="32000" \
-            -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=$API_URL \
-            -e HTTP_PROXY="" \
-            -e HTTPS_PROXY="" \
-            -e http_proxy="" \
-            -e https_proxy="" \
-            -e NO_PROXY="localhost,127.0.0.1,100.*" \
-            -e no_proxy="localhost,127.0.0.1,100.*" \
-            -e CONFIG__FALLBACK_MODELS="[]" \
-            -e OPENAI__FALLBACK_MODELS="[]" \
-            -e LITELM__FALLBACK_MODELS="[]" \
-            codiumai/pr-agent:latest \
-            --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
-            ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."       
+          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          export OPENAI__API_BASE="$API_URL"
+          export OPENAI__API_KEY="dummy-key-for-local"
+          export CONFIG__MODEL="openai/${{ inputs.model_name }}"
+          export CONFIG__AI_TIMEOUT="1200"
+          export CONFIG__CUSTOM_MODEL_MAX_CONTEXT_TOKENS="32000"
+          export CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000"
+          export CONFIG__FALLBACK_MODELS="[]"
+          export OPENAI__FALLBACK_MODELS="[]"
+          export LITELM__FALLBACK_MODELS="[]"
+          
+          export HTTP_PROXY=""
+          export HTTPS_PROXY=""
+          export http_proxy=""
+          export https_proxy=""
+          export NO_PROXY="localhost,127.0.0.1,100.*"
+          export no_proxy="localhost,127.0.0.1,100.*"
+          
+          pr-agent --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
+            ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."
