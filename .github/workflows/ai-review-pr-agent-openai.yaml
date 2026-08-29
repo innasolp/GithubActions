@@ -110,10 +110,19 @@ jobs:
           export NO_PROXY="localhost,127.0.0.1,100.*"
           export no_proxy="localhost,127.0.0.1,100.*"
           
-          # Настройки передаются динамически через $TARGET_MODEL
-          # Добавлен параметр openai.timeout=1200 для сквозного контроля сессии LiteLLM
+          # Убираем двоеточие (заменяем на дефис) только если выбрана Llama
+          if [ "${{ inputs.api }}" = "Llama" ]; then
+            SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
+            FINAL_MODEL_NAME="custom/$SAFE_NAME"
+          else
+            # Для OpenRouter оставляем оригинальное имя с двоеточием
+            FINAL_MODEL_NAME="openai/${{ inputs.model_name }}"
+          fi
+
+          echo "Отправка запроса для модели: $FINAL_MODEL_NAME"
+
           pr-agent \
-            --config "config.model=$TARGET_MODEL" \
+            --config "config.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
             --config "config.custom_model_max_context_tokens=32000" \
@@ -123,6 +132,7 @@ jobs:
             --config "litellm.fallback_models=[]" \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
+
        
       - name: PR Agent - Bug Analysis
         run: |
@@ -137,8 +147,18 @@ jobs:
           export NO_PROXY="localhost,127.0.0.1,100.*"
           export no_proxy="localhost,127.0.0.1,100.*"
           
+          # Точно так же убираем двоеточие для локальной Llama
+          if [ "${{ inputs.api }}" = "Llama" ]; then
+            SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
+            FINAL_MODEL_NAME="custom/$SAFE_NAME"
+          else
+            FINAL_MODEL_NAME="openai/${{ inputs.model_name }}"
+          fi
+
+          echo "Отправка запроса анализа багов для модели: $FINAL_MODEL_NAME"
+
           pr-agent \
-            --config "config.model=$TARGET_MODEL" \
+            --config "config.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
             --config "config.custom_model_max_context_tokens=32000" \
