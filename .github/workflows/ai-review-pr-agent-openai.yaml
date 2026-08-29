@@ -66,8 +66,13 @@ jobs:
         run: |
           if [ "${{ inputs.api }}" = "OpenRouter" ]; then 
             val="${{ secrets.OPENROUTER_ENDPOINT }}"
+            # Для OpenRouter оставляем стандартный префикс openai/
+            echo "TARGET_MODEL=openai/${{ inputs.model_name }}" >> $GITHUB_ENV
           elif [ "${{ inputs.api }}" = "Llama" ]; then
-            val="${{ secrets.LLAMA_ENDPOINT }}"
+            # Для локальной Llama дописываем /v1, необходимый для OpenAI-клиента pr-agent
+            val="${{ secrets.LLAMA_ENDPOINT }}/v1"
+            # Для Llama используем префикс custom/, чтобы отключить логику GPT-5 и заставить LiteLLM ждать
+            echo "TARGET_MODEL=custom/${{ inputs.model_name }}" >> $GITHUB_ENV
             
             gh workflow run llama-check-model.yaml \
               --repo innasolp/GithubActions \
@@ -105,10 +110,12 @@ jobs:
           export NO_PROXY="localhost,127.0.0.1,100.*"
           export no_proxy="localhost,127.0.0.1,100.*"
           
-          # Передаем ВСЕ настройки жестко через флаг --config
+          # Настройки передаются динамически через $TARGET_MODEL
+          # Добавлен параметр openai.timeout=1200 для сквозного контроля сессии LiteLLM
           pr-agent \
-            --config "config.model=openai/${{ inputs.model_name }}" \
+            --config "config.model=$TARGET_MODEL" \
             --config "config.ai_timeout=1200" \
+            --config "openai.timeout=1200" \
             --config "config.custom_model_max_context_tokens=32000" \
             --config "config.custom_model_max_tokens=4000" \
             --config "config.fallback_models=[]" \
@@ -131,8 +138,9 @@ jobs:
           export no_proxy="localhost,127.0.0.1,100.*"
           
           pr-agent \
-            --config "config.model=openai/${{ inputs.model_name }}" \
+            --config "config.model=$TARGET_MODEL" \
             --config "config.ai_timeout=1200" \
+            --config "openai.timeout=1200" \
             --config "config.custom_model_max_context_tokens=32000" \
             --config "config.custom_model_max_tokens=4000" \
             --config "config.fallback_models=[]" \
