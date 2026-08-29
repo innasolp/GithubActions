@@ -94,19 +94,10 @@ jobs:
 
       - name: PR Agent - Description & Changes
         run: |
-          # Конфигурация для CLI-версии (напрямую на хосте раннера)
           export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           export OPENAI__API_BASE="$API_URL"
           export OPENAI__API_KEY="dummy-key-for-local"
-          export CONFIG__MODEL="openai/${{ inputs.model_name }}"
-          export CONFIG__AI_TIMEOUT="1200"
-          export CONFIG__CUSTOM_MODEL_MAX_CONTEXT_TOKENS="32000"
-          export CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000"
-          export CONFIG__FALLBACK_MODELS="[]"
-          export OPENAI__FALLBACK_MODELS="[]"
-          export LITELM__FALLBACK_MODELS="[]"
           
-          # Очищаем прокси самого раннера, чтобы трафик уходил в Tailscale
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
@@ -114,8 +105,16 @@ jobs:
           export NO_PROXY="localhost,127.0.0.1,100.*"
           export no_proxy="localhost,127.0.0.1,100.*"
           
-          # Запуск CLI-команды напрямую в сети, где поднят Tailscale
-          pr-agent --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
+          # Передаем ВСЕ настройки жестко через флаг --config
+          pr-agent \
+            --config "config.model=openai/${{ inputs.model_name }}" \
+            --config "config.ai_timeout=1200" \
+            --config "config.custom_model_max_context_tokens=32000" \
+            --config "config.custom_model_max_tokens=4000" \
+            --config "config.fallback_models=[]" \
+            --config "openai.fallback_models=[]" \
+            --config "litellm.fallback_models=[]" \
+            --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
        
       - name: PR Agent - Bug Analysis
@@ -123,13 +122,6 @@ jobs:
           export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           export OPENAI__API_BASE="$API_URL"
           export OPENAI__API_KEY="dummy-key-for-local"
-          export CONFIG__MODEL="openai/${{ inputs.model_name }}"
-          export CONFIG__AI_TIMEOUT="1200"
-          export CONFIG__CUSTOM_MODEL_MAX_CONTEXT_TOKENS="32000"
-          export CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000"
-          export CONFIG__FALLBACK_MODELS="[]"
-          export OPENAI__FALLBACK_MODELS="[]"
-          export LITELM__FALLBACK_MODELS="[]"
           
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
@@ -138,5 +130,13 @@ jobs:
           export NO_PROXY="localhost,127.0.0.1,100.*"
           export no_proxy="localhost,127.0.0.1,100.*"
           
-          pr-agent --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
+          pr-agent \
+            --config "config.model=openai/${{ inputs.model_name }}" \
+            --config "config.ai_timeout=1200" \
+            --config "config.custom_model_max_context_tokens=32000" \
+            --config "config.custom_model_max_tokens=4000" \
+            --config "config.fallback_models=[]" \
+            --config "openai.fallback_models=[]" \
+            --config "litellm.fallback_models=[]" \
+            --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."
