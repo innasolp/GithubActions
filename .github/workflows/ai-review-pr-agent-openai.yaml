@@ -99,6 +99,17 @@ jobs:
             -e CONFIG__AI_TIMEOUT="1200" \
             -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
             -e OPENAI__API_BASE=$API_URL \
+             # Запрещаем контейнеру использовать скрытые прокси GitHub для сети Tailscale:
+            -e HTTP_PROXY="" \
+            -e HTTPS_PROXY="" \
+            -e http_proxy="" \
+            -e https_proxy="" \
+            -e NO_PROXY="localhost,127.0.0.1,100.*" \
+            -e no_proxy="localhost,127.0.0.1,100.*" \
+             # Полностью отключаем фоллбэк на сервера OpenAI:
+            -e CONFIG__FALLBACK_MODELS="[]" \
+            -e OPENAI__FALLBACK_MODELS="[]" \
+            -e LITELM__FALLBACK_MODELS="[]" \
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
@@ -115,6 +126,17 @@ jobs:
             -e CONFIG__AI_TIMEOUT="1200" \
             -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
             -e OPENAI__API_BASE=$API_URL \
+             # Запрещаем контейнеру использовать скрытые прокси GitHub для сети Tailscale:
+            -e HTTP_PROXY="" \
+            -e HTTPS_PROXY="" \
+            -e http_proxy="" \
+            -e https_proxy="" \
+            -e NO_PROXY="localhost,127.0.0.1,100.*" \
+            -e no_proxy="localhost,127.0.0.1,100.*" \
+             # Полностью отключаем фоллбэк на сервера OpenAI:
+            -e CONFIG__FALLBACK_MODELS="[]" \
+            -e OPENAI__FALLBACK_MODELS="[]" \
+            -e LITELM__FALLBACK_MODELS="[]" \
             codiumai/pr-agent:latest \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."       
