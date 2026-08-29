@@ -113,7 +113,7 @@ jobs:
           # Убираем двоеточие (заменяем на дефис) только если выбрана Llama
           if [ "${{ inputs.api }}" = "Llama" ]; then
             SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
-            FINAL_MODEL_NAME="custom/$SAFE_NAME"
+            FINAL_MODEL_NAME="openai/$SAFE_NAME"
           else
             # Для OpenRouter оставляем оригинальное имя с двоеточием
             FINAL_MODEL_NAME="openai/${{ inputs.model_name }}"
@@ -125,6 +125,8 @@ jobs:
             --config "config.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
+            --config "openai.reasoning_effort=null" \
+            --config "litellm.reasoning_effort=null" \
             --config "config.custom_model_max_context_tokens=32000" \
             --config "config.custom_model_max_tokens=4000" \
             --config "config.fallback_models=[]" \
@@ -150,7 +152,7 @@ jobs:
           # Точно так же убираем двоеточие для локальной Llama
           if [ "${{ inputs.api }}" = "Llama" ]; then
             SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
-            FINAL_MODEL_NAME="custom/$SAFE_NAME"
+            FINAL_MODEL_NAME="openai/$SAFE_NAME"
           else
             FINAL_MODEL_NAME="openai/${{ inputs.model_name }}"
           fi
@@ -161,6 +163,8 @@ jobs:
             --config "config.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
+            --config "openai.reasoning_effort=null" \
+            --config "litellm.reasoning_effort=null" \
             --config "config.custom_model_max_context_tokens=32000" \
             --config "config.custom_model_max_tokens=4000" \
             --config "config.fallback_models=[]" \
