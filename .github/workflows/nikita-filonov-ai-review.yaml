@@ -94,7 +94,7 @@ jobs:
           VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-          AGENT__ENABLED: ${{ github.event.inputs.agent-mode }}
+          AGENT__ENABLED: ${{ inputs.agent-mode }}
           AGENT__MAX_ITERATIONS: "25"
           AGENT__COMMAND_TIMEOUT: "10"
           AGENT__MAX_TOTAL_CONTEXT_CHARS: "40000"
