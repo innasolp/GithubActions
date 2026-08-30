@@ -3,6 +3,9 @@ name: X AI Review by nikita filonov
 on:
   workflow_call:
     inputs:
+      agent-mode:
+        type: boolean
+        default: true
       review-command:
         type: string
         default: 'run'
@@ -89,6 +92,12 @@ jobs:
           VCS__PIPELINE__PULL_NUMBER: ${{ inputs.pull-request-number }}
           VCS__HTTP_CLIENT__API_URL: "https://api.github.com"
           VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
+
+          AGENT__ENABLED: ${{ inputs.agent-mode }}
+          AGENT__MAX_ITERATIONS: "25"
+          AGENT__COMMAND_TIMEOUT: "10"
+          AGENT__MAX_TOTAL_CONTEXT_CHARS: "40000"
+          AGENT__MAX_COMMAND_OUTPUT_CHARS: "40000"
         with:
           review-command: ${{ inputs.review-command }}
