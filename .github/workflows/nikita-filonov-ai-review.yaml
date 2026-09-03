@@ -6,6 +6,10 @@ on:
       agent-mode:
         type: boolean
         default: true
+      rg_enabled:
+        description: 'ripgrep for AI-gent when agent mode enabled'
+        type: boolean
+        default: true  
       review-command:
         type: string
         default: 'run'
@@ -72,7 +76,13 @@ jobs:
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:ci      
+          tags: tag:ci     
+
+      - name: Install ripgrep
+        if: ${{ inputs.rg_enabled == true }}
+        run: |
+          echo "Installing ripgrep as requested by inputs.rg..."
+          sudo apt-get update && sudo apt-get install -y ripgrep    
 
       - uses: Nikita-Filonov/ai-review@v0.64.0
         env:
@@ -99,5 +109,13 @@ jobs:
           AGENT__COMMAND_TIMEOUT: "10"
           AGENT__MAX_TOTAL_CONTEXT_CHARS: "40000"
           AGENT__MAX_COMMAND_OUTPUT_CHARS: "40000"
+
+          # Динамически собираем список команд на основе inputs.rg
+          AI_REVIEW_AGENT_ALLOW_COMMANDS: >-
+            ${{ 
+              inputs.rg_enabled == true 
+              && '["^ls(?:\\s+.*)?$", "^cat(?:\\s+.*)?$", "^rg(?:\\s+.*)?$", "^grep(?:\\s+.*)?$", "^git\\s+(?:status|show|diff|log|rev-parse|ls-files)(?:\\s+.*)?$"]' 
+              || '["^ls(?:\\s+.*)?$", "^cat(?:\\s+.*)?$", "^git\\s+(?:status|show|diff|log|rev-parse|ls-files)(?:\\s+.*)?$"]' 
+            }}
         with:
           review-command: ${{ inputs.review-command }}
