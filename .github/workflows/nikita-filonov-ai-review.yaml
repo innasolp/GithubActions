@@ -85,6 +85,20 @@ jobs:
           echo "Installing ripgrep as requested by inputs.rg..."
           sudo apt-get update && sudo apt-get install -y ripgrep    
 
+      - name: Setup Dynamic Environment
+        run: |
+          if [ "${{ github.event.inputs.review-command }}" = "summary" ]; then
+            echo 'REVIEW__MODES=["summary"]' >> $GITHUB_ENV
+            
+            # Многострочная запись промпта в GITHUB_ENV
+            echo "REVIEW__PROMPTS__SUMMARY<<EOF" >> $GITHUB_ENV
+            echo "You are a technical lead. Write a short, bulleted summary of these code changes. Be extremely brief."
+            echo "EOF" >> $GITHUB_ENV
+          else
+            # Для других режимов включаем стандартное поведение и не передаем PROMPTS__SUMMARY вообще
+            echo 'REVIEW__MODES=["inline", "summary"]' >> $GITHUB_ENV
+          fi    
+
       - uses: Nikita-Filonov/ai-review@v0.64.0
         env:
           # --- LLM configuration ---
