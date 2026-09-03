@@ -92,7 +92,9 @@ jobs:
             
             # Многострочная запись промпта в GITHUB_ENV
             echo "REVIEW__PROMPTS__SUMMARY<<EOF" >> $GITHUB_ENV
-            echo "You are a technical lead. Write a short, bulleted summary of these code changes. Be extremely brief."
+            echo " You are an elite code reviewer. Review the following changes from a massive pull request.
+                  Provide a high-level, concise executive summary of what was changed across the files.
+                  Use bullet points. Do not review line-by-line. Focus only on architectural or logic changes."
             echo "EOF" >> $GITHUB_ENV
           else
             # Для других режимов включаем стандартное поведение и не передаем PROMPTS__SUMMARY вообще
