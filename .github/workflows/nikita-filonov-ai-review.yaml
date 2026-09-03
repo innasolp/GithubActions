@@ -43,7 +43,8 @@ jobs:
             # --todo
             token="not-needed-for-local"
           elif [ "${{ inputs.provider }}" = "LLAMA" ]; then
-            val="${{ secrets.LLAMA_ENDPOINT }}"
+            # val="${{ secrets.LLAMA_ENDPOINT }}"
+            val="http://100.89.249.118:11434"
             llm='OPENAI'
             token="not-needed-for-local"
             gh workflow run llama-check-model.yaml \
