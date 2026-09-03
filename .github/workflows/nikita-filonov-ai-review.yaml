@@ -93,7 +93,7 @@ jobs:
           LLM__META__MAX_TOKENS: "16384"
           LLM__META__TEMPERATURE: "0.3"
           LLM__HTTP_CLIENT__API_URL: ${{ steps.get_api_step.outputs.api_url }}
-          LLM__HTTP_CLIENT__TIMEOUT: 1200
+          LLM__HTTP_CLIENT__TIMEOUT: 4800
           LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
           LLM__HTTP_CLIENT__STREAM: "true"
 
