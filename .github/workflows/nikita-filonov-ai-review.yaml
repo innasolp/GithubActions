@@ -94,6 +94,7 @@ jobs:
           LLM__HTTP_CLIENT__API_URL: ${{ steps.get_api_step.outputs.api_url }}
           LLM__HTTP_CLIENT__TIMEOUT: 600
           LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
+          LLM__HTTP_CLIENT__STREAM: "true"
 
           # --- GitHub integration ---
           VCS__PROVIDER: "GITHUB"
