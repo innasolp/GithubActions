@@ -102,18 +102,22 @@ jobs:
           VCS__PIPELINE__PULL_NUMBER: ${{ inputs.pull-request-number }}
           VCS__HTTP_CLIENT__API_URL: "https://api.github.com"
           VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VCS__PAGINATION__PER_PAGE: "20"
+          VCS__PAGINATION__MAX_PAGES: "1"
 
 
           AGENT__ENABLED: ${{ inputs.agent-mode }}
           AGENT__MAX_ITERATIONS: "25"
           AGENT__COMMAND_TIMEOUT: "10"
-          AGENT__MAX_TOTAL_CONTEXT_CHARS: "40000"
-          AGENT__MAX_COMMAND_OUTPUT_CHARS: "40000"
+          AGENT__MAX_TOTAL_CONTEXT_CHARS: "20000"
+          AGENT__MAX_COMMAND_OUTPUT_CHARS: "20000"
 
           # --- ДОБАВЛЕНО: Защита от OOM на больших файлах ---
           # Отключаем построение финального общего саммари по всем 122 файлам сразу
           PROMPT__INCLUDE_SUMMARY_SYSTEM_PROMPTS: "false"
           PROMPT__INCLUDE_SUMMARY_REPLY_SYSTEM_PROMPTS: "false"
+          REVIEW__SUMMARY_TAG: ""
+          REVIEW__SUMMARY_REPLY_TAG: ""
           
           # Сокращаем количество строк кода вокруг изменений до 3 (по умолчанию обычно 10)
           # Это снизит объем текста, передаваемого модели за один раз
