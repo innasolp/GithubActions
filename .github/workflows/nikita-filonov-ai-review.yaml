@@ -103,7 +103,7 @@ jobs:
           VCS__HTTP_CLIENT__API_URL: "https://api.github.com"
           VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VCS__PAGINATION__PER_PAGE: "20"
-          VCS__PAGINATION__MAX_PAGES: "1"
+          VCS__PAGINATION__MAX_PAGES: "4"
 
 
           AGENT__ENABLED: ${{ inputs.agent-mode }}
