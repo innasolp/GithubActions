@@ -110,6 +110,15 @@ jobs:
           AGENT__MAX_TOTAL_CONTEXT_CHARS: "40000"
           AGENT__MAX_COMMAND_OUTPUT_CHARS: "40000"
 
+          # --- ДОБАВЛЕНО: Защита от OOM на больших файлах ---
+          # Отключаем построение финального общего саммари по всем 122 файлам сразу
+          PROMPT__INCLUDE_SUMMARY_SYSTEM_PROMPTS: "false"
+          PROMPT__INCLUDE_SUMMARY_REPLY_SYSTEM_PROMPTS: "false"
+          
+          # Сокращаем количество строк кода вокруг изменений до 3 (по умолчанию обычно 10)
+          # Это снизит объем текста, передаваемого модели за один раз
+          REVIEW__CONTEXT_LINES: "3"
+
           # Динамически собираем список команд на основе inputs.rg
           #AI_REVIEW_AGENT_ALLOW_COMMANDS: >-
           #  ${{ 
