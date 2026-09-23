@@ -126,8 +126,8 @@ jobs:
           VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
           
           # РАСКОММЕНТИРОВАНО: Ограничиваем пул файлов за раз, чтобы разгрузить llama.cpp
-          # VCS__PAGINATION__PER_PAGE: "10"
-          # VCS__PAGINATION__MAX_PAGES: "2"
+          VCS__PAGINATION__PER_PAGE: "30"
+          VCS__PAGINATION__MAX_PAGES: "5"
 
           AGENT__ENABLED: ${{ inputs.agent-mode }}
           AGENT__MAX_ITERATIONS: "25"
