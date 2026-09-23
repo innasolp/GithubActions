@@ -141,4 +141,4 @@ jobs:
 
         with:
           # Инъекция инструкции формата напрямую в команду агенту
-          review-command: "${{ inputs.review-command }} Respond ONLY with a valid raw JSON array. Never wrap code in markdown tags like ```."
+          review-command: '\${{ inputs.review-command }} Respond ONLY with a valid raw JSON array. Never wrap code in markdown tags like ```.'
