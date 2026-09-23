@@ -113,6 +113,7 @@ jobs:
           LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
           LLM__HTTP_CLIENT__STREAM: "true"
           LLM__META__RESPONSE_FORMAT: '{"type": "json_object"}'
+          LLM__META__EXTRA_BODY: '{"grammar": "root ::= json_array"}'
 
           # --- GitHub integration ---
           VCS__PROVIDER: "GITHUB"
