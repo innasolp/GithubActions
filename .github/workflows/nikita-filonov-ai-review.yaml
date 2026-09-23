@@ -107,7 +107,7 @@ jobs:
           LLM__PROVIDER: ${{ steps.get_api_step.outputs.llm_provider }}
           LLM__META__MODEL: ${{ inputs.model_name }}
           LLM__META__MAX_TOKENS: "16384"
-          LLM__META__TEMPERATURE: "0.3"
+          LLM__META__TEMPERATURE: "0.0"
           LLM__HTTP_CLIENT__API_URL: ${{ steps.get_api_step.outputs.api_url }}
           LLM__HTTP_CLIENT__TIMEOUT: 4800
           LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
@@ -121,9 +121,9 @@ jobs:
           VCS__PIPELINE__REPO: ${{ github.event.repository.name }}
           VCS__PIPELINE__PULL_NUMBER: ${{ inputs.pull-request-number }}
           VCS__HTTP_CLIENT__API_URL: "https://api.github.com"
-          VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          #VCS__PAGINATION__PER_PAGE: "20"
-          #VCS__PAGINATION__MAX_PAGES: "4"
+          VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
+          VCS__PAGINATION__PER_PAGE: "20"
+          VCS__PAGINATION__MAX_PAGES: "4"
 
 
           AGENT__ENABLED: ${{ inputs.agent-mode }}
@@ -138,12 +138,12 @@ jobs:
           #PROMPT__INCLUDE_SUMMARY_REPLY_SYSTEM_PROMPTS: "false"
           #REVIEW__SUMMARY_TAG: ""
           #REVIEW__SUMMARY_REPLY_TAG: ""
-          PROMPT__REVIEW_INLINE_SYSTEM_PROMPT: "You are a code reviewer. Review the code changes. Your response must be ONLY a valid raw JSON array of objects. CRITICAL: Never write ```json or ``` at the beginning or end of your response. Start immediately with [ and end with ]. No introduction, no markdown."
+          PROMPT__REVIEW_INLINE_SYSTEM_PROMPT: "You are a code reviewer. Review the code changes. Your response must be ONLY a valid raw JSON array matching the schema. CRITICAL: Do NOT wrap the JSON inside markdown code blocks. Never write ```json or ```. Start immediately with '[' and end with ']'. No text before or after."
 
           
           # Сокращаем количество строк кода вокруг изменений до 3 (по умолчанию обычно 10)
           # Это снизит объем текста, передаваемого модели за один раз
-          REVIEW__CONTEXT_LINES: "3"
+          # REVIEW__CONTEXT_LINES: "3"
 
           # Динамически собираем список команд на основе inputs.rg
           #AI_REVIEW_AGENT_ALLOW_COMMANDS: >-
