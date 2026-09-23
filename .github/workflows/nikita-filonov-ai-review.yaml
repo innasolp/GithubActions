@@ -112,6 +112,7 @@ jobs:
           LLM__HTTP_CLIENT__TIMEOUT: 4800
           LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
           LLM__HTTP_CLIENT__STREAM: "true"
+          LLM__META__RESPONSE_FORMAT: '{"type": "json_object"}'
 
           # --- GitHub integration ---
           VCS__PROVIDER: "GITHUB"
