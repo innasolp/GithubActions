@@ -112,7 +112,9 @@ jobs:
           LLM__HTTP_CLIENT__TIMEOUT: 4800
           LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
           LLM__HTTP_CLIENT__STREAM: "true"
-          LLM__META__RESPONSE_FORMAT: '{"type": "json_object"}'
+          
+          # УБРАНО: RESPONSE_FORMAT (так как он требует {} вместо массива [])
+          # ОСТАВЛЯЕМ ТОЛЬКО ГРАММАТИКУ МАССИВА:
           LLM__META__EXTRA_BODY: '{"grammar": "root ::= json_array"}'
 
           # --- GitHub integration ---
@@ -122,9 +124,10 @@ jobs:
           VCS__PIPELINE__PULL_NUMBER: ${{ inputs.pull-request-number }}
           VCS__HTTP_CLIENT__API_URL: "https://api.github.com"
           VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
-          #VCS__PAGINATION__PER_PAGE: "20"
-          #VCS__PAGINATION__MAX_PAGES: "4"
-
+          
+          # РАСКОММЕНТИРОВАНО: Ограничиваем пул файлов за раз, чтобы разгрузить llama.cpp
+          # VCS__PAGINATION__PER_PAGE: "10"
+          # VCS__PAGINATION__MAX_PAGES: "2"
 
           AGENT__ENABLED: ${{ inputs.agent-mode }}
           AGENT__MAX_ITERATIONS: "25"
@@ -132,25 +135,23 @@ jobs:
           AGENT__MAX_TOTAL_CONTEXT_CHARS: "40000"
           AGENT__MAX_COMMAND_OUTPUT_CHARS: "40000"
 
-          # --- ДОБАВЛЕНО: Защита от OOM на больших файлах ---
-          # Отключаем построение финального общего саммари по всем 122 файлам сразу
-          #PROMPT__INCLUDE_SUMMARY_SYSTEM_PROMPTS: "false"
-          #PROMPT__INCLUDE_SUMMARY_REPLY_SYSTEM_PROMPTS: "false"
-          #REVIEW__SUMMARY_TAG: ""
-          #REVIEW__SUMMARY_REPLY_TAG: ""
-          PROMPT__REVIEW_INLINE_SYSTEM_PROMPT: "You are a code reviewer. Review the code changes. Your response must be ONLY a valid raw JSON array matching the schema. CRITICAL: Do NOT wrap the JSON inside markdown code blocks. Never write ```json or ```. Start immediately with '[' and end with ']'. No text before or after."
+          # --- ЗАЩИТА ОТ OOM И ЛИШНИХ ЗАПРОСОВ ---
+          # Раскомментировано, чтобы убрать тяжелый глобальный шаг Summary
+          PROMPT__INCLUDE_SUMMARY_SYSTEM_PROMPTS: "false"
+          PROMPT__INCLUDE_SUMMARY_REPLY_SYSTEM_PROMPTS: "false"
+          REVIEW__SUMMARY_TAG: ""
+          REVIEW__SUMMARY_REPLY_TAG: ""
+          REVIEW__CONTEXT_LINES: "3"
 
-          
-          # Сокращаем количество строк кода вокруг изменений до 3 (по умолчанию обычно 10)
-          # Это снизит объем текста, передаваемого модели за один раз
-          # REVIEW__CONTEXT_LINES: "3"
+          # ИСПРАВЛЕНО: Безопасный многострочный синтаксис YAML без конфликтов кавычек
+          PROMPT__REVIEW_INLINE_SYSTEM_PROMPT: >-
+            You are a code reviewer. Review the code changes. 
+            Your response must be ONLY a valid raw JSON array matching the schema. 
+            CRITICAL: Do NOT wrap the JSON inside markdown code blocks. 
+            Never write ```json or ```. 
+            Start immediately with the open bracket [ and end with the close bracket ]. 
+            No text before or after.
 
-          # Динамически собираем список команд на основе inputs.rg
-          #AI_REVIEW_AGENT_ALLOW_COMMANDS: >-
-          #  ${{ 
-          #    inputs.rg_enabled == true 
-          #    && '["^ls(?:\\s+.*)?$", "^cat(?:\\s+.*)?$", "^rg(?:\\s+.*)?$", "^grep(?:\\s+.*)?$", "^git\\s+(?:status|show|diff|log|rev-parse|ls-files)(?:\\s+.*)?$"]' 
-          #    || '["^ls(?:\\s+.*)?$", "^cat(?:\\s+.*)?$", "^git\\s+(?:status|show|diff|log|rev-parse|ls-files)(?:\\s+.*)?$"]' 
-          #  }}
         with:
           review-command: ${{ inputs.review-command }}
+
