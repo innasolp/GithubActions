@@ -104,54 +104,41 @@ jobs:
       - uses: Nikita-Filonov/ai-review@v0.64.0
         env:
           # --- LLM configuration ---
-          LLM__PROVIDER: ${{ steps.get_api_step.outputs.llm_provider }}
-          LLM__META__MODEL: ${{ inputs.model_name }}
+          LLM__PROVIDER: \${{ steps.get_api_step.outputs.llm_provider }}
+          LLM__META__MODEL: \${{ inputs.model_name }}
           LLM__META__MAX_TOKENS: "16384"
           LLM__META__TEMPERATURE: "0.0"
-          LLM__HTTP_CLIENT__API_URL: ${{ steps.get_api_step.outputs.api_url }}
+          LLM__HTTP_CLIENT__API_URL: \${{ steps.get_api_step.outputs.api_url }}
           LLM__HTTP_CLIENT__TIMEOUT: 4800
-          LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
+          LLM__HTTP_CLIENT__API_TOKEN: \${{ steps.get_api_step.outputs.api_token }}
           LLM__HTTP_CLIENT__STREAM: "true"
           
-          # УБРАНО: RESPONSE_FORMAT (так как он требует {} вместо массива [])
-          # ОСТАВЛЯЕМ ТОЛЬКО ГРАММАТИКУ МАССИВА:
-          LLM__META__EXTRA_BODY: '{"grammar": "root ::= json_array"}'
+          # Оставляем только эту строку для контроля формата на уровне llama.cpp
+          LLM__META__EXTRA_BODY: '{"grammar": "json"}'
 
           # --- GitHub integration ---
           VCS__PROVIDER: "GITHUB"
-          VCS__PIPELINE__OWNER: ${{ github.repository_owner }}
-          VCS__PIPELINE__REPO: ${{ github.event.repository.name }}
-          VCS__PIPELINE__PULL_NUMBER: ${{ inputs.pull-request-number }}
-          VCS__HTTP_CLIENT__API_URL: "https://api.github.com"
-          VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
-          
-          # РАСКОММЕНТИРОВАНО: Ограничиваем пул файлов за раз, чтобы разгрузить llama.cpp
+          VCS__PIPELINE__OWNER: \${{ github.repository_owner }}
+          VCS__PIPELINE__REPO: \${{ github.event.repository.name }}
+          VCS__PIPELINE__PULL_NUMBER: \${{ inputs.pull-request-number }}
+          VCS__HTTP_CLIENT__API_URL: "https://github.com"
+          VCS__HTTP_CLIENT__API_TOKEN: \${{ secrets.GITHUB_TOKEN }}          
           VCS__PAGINATION__PER_PAGE: "30"
           VCS__PAGINATION__MAX_PAGES: "5"
 
-          AGENT__ENABLED: ${{ inputs.agent-mode }}
+          AGENT__ENABLED: \${{ inputs.agent-mode }}
           AGENT__MAX_ITERATIONS: "25"
           AGENT__COMMAND_TIMEOUT: "10"
           AGENT__MAX_TOTAL_CONTEXT_CHARS: "40000"
           AGENT__MAX_COMMAND_OUTPUT_CHARS: "40000"
 
-          # --- ЗАЩИТА ОТ OOM И ЛИШНИХ ЗАПРОСОВ ---
-          # Раскомментировано, чтобы убрать тяжелый глобальный шаг Summary
+          # --- Защита от OOM ---
           PROMPT__INCLUDE_SUMMARY_SYSTEM_PROMPTS: "false"
           PROMPT__INCLUDE_SUMMARY_REPLY_SYSTEM_PROMPTS: "false"
           REVIEW__SUMMARY_TAG: ""
           REVIEW__SUMMARY_REPLY_TAG: ""
           REVIEW__CONTEXT_LINES: "3"
 
-          # ИСПРАВЛЕНО: Безопасный многострочный синтаксис YAML без конфликтов кавычек
-          PROMPT__REVIEW_INLINE_SYSTEM_PROMPT: >-
-            You are a code reviewer. Review the code changes. 
-            Your response must be ONLY a valid raw JSON array matching the schema. 
-            CRITICAL: Do NOT wrap the JSON inside markdown code blocks. 
-            Never write ```json or ```. 
-            Start immediately with the open bracket [ and end with the close bracket ]. 
-            No text before or after.
-
         with:
-          review-command: ${{ inputs.review-command }}
-
+          # Инъекция инструкции формата напрямую в команду агенту
+          review-command: "${{ inputs.review-command }} Respond ONLY with a valid raw JSON array. Never wrap code in markdown tags like ```."
