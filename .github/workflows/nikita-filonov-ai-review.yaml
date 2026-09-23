@@ -137,6 +137,8 @@ jobs:
           #PROMPT__INCLUDE_SUMMARY_REPLY_SYSTEM_PROMPTS: "false"
           #REVIEW__SUMMARY_TAG: ""
           #REVIEW__SUMMARY_REPLY_TAG: ""
+          PROMPT__REVIEW_INLINE_SYSTEM_PROMPT: "You are a code reviewer. Review the code changes. Your response must be ONLY a valid raw JSON array of objects. CRITICAL: Never write ```json or ``` at the beginning or end of your response. Start immediately with [ and end with ]. No introduction, no markdown."
+
           
           # Сокращаем количество строк кода вокруг изменений до 3 (по умолчанию обычно 10)
           # Это снизит объем текста, передаваемого модели за один раз
