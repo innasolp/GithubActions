@@ -47,7 +47,7 @@ jobs:
             # val="http://100.89.249.118:11434"
             llm='OPENAI'
             token="not-needed-for-local"
-            gh workflow run innasolp/GithubActions/.github/workflows/llama-check-model.yaml \
+            gh workflow run llama-check-model.yaml \
               --repo innasolp/GithubActions \
               --ref main \
               -f model_name="${{ inputs.model_name }}"
@@ -56,7 +56,7 @@ jobs:
             val="${{ secrets.LLAMA_ENDPOINT }}"
             llm='OLLAMA'
             token="not-needed-for-local"
-            gh workflow run innasolp/GithubActions/.github/workflows/ollama-check-model.yaml \
+            gh workflow run ollama-check-model.yaml \
               --repo innasolp/GithubActions \
               --ref main \
               -f model_name="${{ inputs.model_name }}"
