@@ -140,5 +140,4 @@ jobs:
           REVIEW__CONTEXT_LINES: "3"
 
         with:
-          # Инъекция инструкции формата напрямую в команду агенту
-          review-command: '${{ inputs.review-command }} Respond ONLY with a valid raw JSON array. Never wrap code in markdown tags like triplets of backticks.'
+          review-command: ${{ inputs.review-command }}
