@@ -66,8 +66,13 @@ jobs:
         run: |
           if [ "${{ inputs.api }}" = "OpenRouter" ]; then 
             val="${{ secrets.OPENROUTER_ENDPOINT }}"
+            # Для OpenRouter оставляем стандартный префикс openai/
+            echo "TARGET_MODEL=openai/${{ inputs.model_name }}" >> $GITHUB_ENV
           elif [ "${{ inputs.api }}" = "Llama" ]; then
-            val="${{ secrets.LLAMA_ENDPOINT }}"
+            # Для локальной Llama дописываем /v1, необходимый для OpenAI-клиента pr-agent
+            val="${{ secrets.LLAMA_ENDPOINT }}/v1"
+            # Для Llama используем префикс custom/, чтобы отключить логику GPT-5 и заставить LiteLLM ждать
+            echo "TARGET_MODEL=custom/${{ inputs.model_name }}" >> $GITHUB_ENV
             
             gh workflow run llama-check-model.yaml \
               --repo innasolp/GithubActions \
@@ -88,33 +93,82 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci    
           
+      - name: Install PR-Agent natively
+        run: |
+          pip install pr-agent
+
       - name: PR Agent - Description & Changes
         run: |
-          docker run --rm \
-            --network=host \
-            -v ${{ github.workspace }}:/github/workspace \
-            -w /app \
-            -e GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e CONFIG__MODEL="openai/${{ inputs.model_name }}" \
-            -e CONFIG__AI_TIMEOUT="1200" \
-            -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=$API_URL \
-            codiumai/pr-agent:latest \
+          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          export OPENAI__API_BASE="$API_URL"
+          export OPENAI__API_KEY="dummy-key-for-local"
+          
+          export HTTP_PROXY=""
+          export HTTPS_PROXY=""
+          export http_proxy=""
+          export https_proxy=""
+          export NO_PROXY="localhost,127.0.0.1,100.*"
+          export no_proxy="localhost,127.0.0.1,100.*"
+          
+          # Убираем двоеточие (заменяем на дефис) только если выбрана Llama
+          if [ "${{ inputs.api }}" = "Llama" ]; then
+            SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
+            FINAL_MODEL_NAME="openai/$SAFE_NAME"
+          else
+            # Для OpenRouter оставляем оригинальное имя с двоеточием
+            FINAL_MODEL_NAME="openai/${{ inputs.model_name }}"
+          fi
+
+          echo "Отправка запроса для модели: $FINAL_MODEL_NAME"
+
+          pr-agent \
+            --config "config.model=$FINAL_MODEL_NAME" \
+            --config "config.ai_timeout=1200" \
+            --config "openai.timeout=1200" \
+            --config "openai.reasoning_effort=null" \
+            --config "litellm.reasoning_effort=null" \
+            --config "config.custom_model_max_context_tokens=32000" \
+            --config "config.custom_model_max_tokens=4000" \
+            --config "config.fallback_models=[]" \
+            --config "openai.fallback_models=[]" \
+            --config "litellm.fallback_models=[]" \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
 
        
       - name: PR Agent - Bug Analysis
         run: |
-          docker run --rm \
-            --network=host \
-            -v ${{ github.workspace }}:/github/workspace \
-            -w /app \
-            -e GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e CONFIG__MODEL="openai/${{ inputs.model_name }}" \
-            -e CONFIG__AI_TIMEOUT="1200" \
-            -e CONFIG__CUSTOM_MODEL_MAX_TOKENS="4000" \
-            -e OPENAI__API_BASE=$API_URL \
-            codiumai/pr-agent:latest \
+          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          export OPENAI__API_BASE="$API_URL"
+          export OPENAI__API_KEY="dummy-key-for-local"
+          
+          export HTTP_PROXY=""
+          export HTTPS_PROXY=""
+          export http_proxy=""
+          export https_proxy=""
+          export NO_PROXY="localhost,127.0.0.1,100.*"
+          export no_proxy="localhost,127.0.0.1,100.*"
+          
+          # Точно так же убираем двоеточие для локальной Llama
+          if [ "${{ inputs.api }}" = "Llama" ]; then
+            SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
+            FINAL_MODEL_NAME="openai/$SAFE_NAME"
+          else
+            FINAL_MODEL_NAME="openai/${{ inputs.model_name }}"
+          fi
+
+          echo "Отправка запроса анализа багов для модели: $FINAL_MODEL_NAME"
+
+          pr-agent \
+            --config "config.model=$FINAL_MODEL_NAME" \
+            --config "config.ai_timeout=1200" \
+            --config "openai.timeout=1200" \
+            --config "openai.reasoning_effort=null" \
+            --config "litellm.reasoning_effort=null" \
+            --config "config.custom_model_max_context_tokens=32000" \
+            --config "config.custom_model_max_tokens=4000" \
+            --config "config.fallback_models=[]" \
+            --config "openai.fallback_models=[]" \
+            --config "litellm.fallback_models=[]" \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
-            ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."       
+            ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."
