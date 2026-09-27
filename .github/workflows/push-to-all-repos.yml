@@ -48,7 +48,7 @@ jobs:
             gh repo clone "$repo" "temp-$repo" || { echo "❌ Cloning $repo failed"; continue; }
             cd "temp-$repo"
 
-            attr_rule=".github/workflows/** linguist-generated=true"
+            attr_rule=".github/**/*.{yaml,yml} linguist-generated=true"
             if [ -f .gitattributes ]; then
               if ! grep -qsF "$attr_rule" .gitattributes; then
                 echo "$attr_rule" >> .gitattributes
@@ -57,15 +57,15 @@ jobs:
               echo "$attr_rule" > .gitattributes
             fi
 
-            mkdir -p .github/workflows
-            cp ../.github/workflows/${{ github.event.inputs.action_yaml }} .github/workflows/${{ github.event.inputs.action_yaml }}
+            mkdir -p .github
+            cp ../.github/${{ github.event.inputs.action_yaml }} .github/${{ github.event.inputs.action_yaml }}
 
             default_branch=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
             echo "📍 Default branch: $default_branch"
 
             has_develop=$(git branch -r | grep "origin/develop$")
 
-            git add .gitattributes .github/workflows/${{ github.event.inputs.action_yaml }}
+            git add .gitattributes .github/${{ github.event.inputs.action_yaml }}
             
             if [ -n "$(git status --porcelain)" ]; then
               git commit -m "chore: distribute global action and hide it from agents"
