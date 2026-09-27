@@ -57,7 +57,14 @@ jobs:
               echo "$attr_rule" > .gitattributes
             fi
 
-            cp ${{ github.event.inputs.action_yaml }} ${{ github.event.inputs.action_yaml }}
+            # 1. Извлекаем путь к папке из переданного файла
+            TARGET_DIR=$(dirname "${{ github.event.inputs.action_yaml }}")
+            
+            # 2. Создаем эту папку в текущем репозитории (если её нет)
+            mkdir -p "$TARGET_DIR"
+            
+            # 3. Копируем файл из внешнего источника (../) в текущую директорию (.)
+            cp "../${{ github.event.inputs.action_yaml }}" "./${{ github.event.inputs.action_yaml }}"
 
             default_branch=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
             echo "📍 Default branch: $default_branch"
