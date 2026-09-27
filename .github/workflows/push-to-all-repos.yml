@@ -12,7 +12,7 @@ on:
         type: boolean
         default: false
       action_yaml:
-        description: 'github action file'
+        description: 'action file'
         type: string
         required: true
 
@@ -48,7 +48,7 @@ jobs:
             gh repo clone "$repo" "temp-$repo" || { echo "❌ Cloning $repo failed"; continue; }
             cd "temp-$repo"
 
-            attr_rule=".github/workflows/** linguist-generated=true"
+            attr_rule="*.{yaml,yml} linguist-generated=true"
             if [ -f .gitattributes ]; then
               if ! grep -qsF "$attr_rule" .gitattributes; then
                 echo "$attr_rule" >> .gitattributes
@@ -57,15 +57,25 @@ jobs:
               echo "$attr_rule" > .gitattributes
             fi
 
-            mkdir -p .github/workflows
-            cp ../.github/workflows/${{ github.event.inputs.action_yaml }} .github/workflows/${{ github.event.inputs.action_yaml }}
+            # 1. Записываем инпут в переменную
+            FILE_PATH="${{ github.event.inputs.action_yaml }}"
+            
+            # 2. Вычисляем папку, в которую нужно положить файл внутри целевого репозитория
+            TARGET_DIR=$(dirname "$FILE_PATH")
+            
+            # 3. Создаем эту папку прямо здесь (в целевом репозитории)
+            mkdir -p "$TARGET_DIR"
+            
+            # 4. Копируем файл ИЗ центрального репозитория (он уровнем выше: ../) 
+            # В текущую папку целевого репозитория (./)
+            cp "../$FILE_PATH" "./$FILE_PATH"
 
             default_branch=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
             echo "📍 Default branch: $default_branch"
 
             has_develop=$(git branch -r | grep "origin/develop$")
 
-            git add .gitattributes .github/workflows/${{ github.event.inputs.action_yaml }}
+            git add .gitattributes ${{ github.event.inputs.action_yaml }}
             
             if [ -n "$(git status --porcelain)" ]; then
               git commit -m "chore: distribute global action and hide it from agents"
