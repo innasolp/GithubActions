@@ -57,18 +57,18 @@ jobs:
               echo "$attr_rule" > .gitattributes
             fi
 
-            # 1. Записываем инпут в переменную для удобства
+            # 1. Записываем инпут в переменную
             FILE_PATH="${{ github.event.inputs.action_yaml }}"
             
-            # 2. Извлекаем путь к папке (например, из 'src/configs/app.yaml' получим 'src/configs')
+            # 2. Вычисляем папку, в которую нужно положить файл внутри целевого репозитория
             TARGET_DIR=$(dirname "$FILE_PATH")
             
-            # 3. Переходим во временную папку или создаем структуру внутри репозитория.
-            # Если вы хотите скопировать файл в ДРУГОЕ место с тем же именем, 
-            # назначению нужен префикс. Например, копируем в папку 'backup/' с сохранением структуры:
+            # 3. Создаем эту папку прямо здесь (в целевом репозитории)
+            mkdir -p "$TARGET_DIR"
             
-            mkdir -p "backup/$TARGET_DIR"
-            cp "$FILE_PATH" "backup/$FILE_PATH"
+            # 4. Копируем файл ИЗ центрального репозитория (он уровнем выше: ../) 
+            # В текущую папку целевого репозитория (./)
+            cp "../$FILE_PATH" "./$FILE_PATH"
 
             default_branch=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
             echo "📍 Default branch: $default_branch"
