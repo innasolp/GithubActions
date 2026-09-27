@@ -57,7 +57,7 @@ jobs:
               echo "$attr_rule" > .gitattributes
             fi
 
-            cp ../${{ github.event.inputs.action_yaml }} ${{ github.event.inputs.action_yaml }}
+            cp ${{ github.event.inputs.action_yaml }} ${{ github.event.inputs.action_yaml }}
 
             default_branch=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
             echo "📍 Default branch: $default_branch"
