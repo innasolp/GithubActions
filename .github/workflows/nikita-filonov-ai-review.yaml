@@ -52,6 +52,11 @@ jobs:
             llm='OPENAI'
             # --todo
             token="${{ secrets.GPTUNNEL_API_TOKEN }}"  
+          elif [ "${{ inputs.provider }}" = "AITUNNEL" ]; then 
+            val="${{ secrets.AITUNNEL_ENDPOINT }}"
+            llm='OPENAI'
+            # --todo
+            token="${{ secrets.AITUNNEL_API_TOKEN }}"  
           elif [ "${{ inputs.provider }}" = "LLAMA" ]; then
             val="${{ secrets.LLAMA_ENDPOINT }}"
             # val="http://100.89.249.118:11434"
