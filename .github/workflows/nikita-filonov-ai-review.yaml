@@ -42,6 +42,11 @@ jobs:
             llm='OPENAI'
             # --todo
             token="${{ secrets.OPENROUTER_API_TOKEN }}"
+          elif [ "${{ inputs.provider }}" = "PGSGROVE" ]; then 
+            val="${{ secrets.PGSGROVE_ENDPOINT }}"
+            llm='OPENAI'
+            # --todo
+            token="${{ secrets.PGSGROVE_API_TOKEN }}"  
           elif [ "${{ inputs.provider }}" = "LLAMA" ]; then
             val="${{ secrets.LLAMA_ENDPOINT }}"
             # val="http://100.89.249.118:11434"
