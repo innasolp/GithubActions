@@ -22,7 +22,10 @@ on:
         options:
           - 'LLAMA'
           - 'OPENROUTER' 
-          - 'OLLAMA'  
+          - 'OLLAMA' 
+          - 'PGSGROVE'
+          - 'GPTUNNEL'
+          - 'AITUNNEL'
       model_name:
         description: 'Select model'
         required: true
@@ -31,7 +34,9 @@ on:
         options:
           - 'qwen2.5-coder:14b'
           - 'qwen2.5-coder:7b' 
-          - 'qwen2.5-coder:3b'  
+          - 'qwen2.5-coder:3b' 
+          - 'qwen/qwen3.8-27b:free'
+          - 'deepseek-v4-pro'
       review-command:
         type: choice
         default: 'run'

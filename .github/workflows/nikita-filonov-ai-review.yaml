@@ -47,6 +47,16 @@ jobs:
             llm='OPENAI'
             # --todo
             token="${{ secrets.PGSGROVE_API_TOKEN }}"  
+          elif [ "${{ inputs.provider }}" = "GPTUNNEL" ]; then 
+            val="${{ secrets.GPTUNNEL_ENDPOINT }}"
+            llm='OPENAI'
+            # --todo
+            token="${{ secrets.GPTUNNEL_API_TOKEN }}"  
+          elif [ "${{ inputs.provider }}" = "AITUNNEL" ]; then 
+            val="${{ secrets.AITUNNEL_ENDPOINT }}"
+            llm='OPENAI'
+            # --todo
+            token="${{ secrets.AITUNNEL_API_TOKEN }}"  
           elif [ "${{ inputs.provider }}" = "LLAMA" ]; then
             val="${{ secrets.LLAMA_ENDPOINT }}"
             # val="http://100.89.249.118:11434"
@@ -106,7 +116,7 @@ jobs:
             echo 'REVIEW__MODES=["inline", "summary"]' >> $GITHUB_ENV
           fi    
 
-      - uses: Nikita-Filonov/ai-review@v0.64.0
+      - uses: Nikita-Filonov/ai-review@main
         env:
           # --- LLM configuration ---
           LLM__PROVIDER: ${{ steps.get_api_step.outputs.llm_provider }}
@@ -118,10 +128,6 @@ jobs:
           LLM__HTTP_CLIENT__API_TOKEN: ${{ steps.get_api_step.outputs.api_token }}
           LLM__HTTP_CLIENT__STREAM: "true"
           
-          # Оставляем только эту строку для контроля формата на уровне llama.cpp
-          # LLM__META__EXTRA_BODY: '{"grammar": "json"}'
-          LLM__META__EXTRA_BODY: '{"grammar": "root ::= [\\n  ] json_array [\\n  ]\\njson_array ::= \"[\" [\\n  ] (json_object (\",\" [\\n  ] json_object)*)? \"]\"\\njson_object ::= \"{\" [\\n  ] json_pair (\",\" [\\n  ] json_pair)* \"}\"\\njson_pair ::= string \":\" [\\n  ] value\\nvalue ::= string | number | json_object | json_array | \"true\" | \"false\" | \"null\"\\nstring ::= \"\\\"\" ([^\传统\"\\\\] | \"\\\\\" [\"\\\\/bfnrt] | \"\\\\u\" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F])* \"\\\"\"\\nnumber ::= \"-\"? ([0-9] | [1-9] [0-9]*) (\".\" [0-9]+)? ([eE] [+-]? [0-9]+)?"}'
-
           # --- GitHub integration ---
           VCS__PROVIDER: "GITHUB"
           VCS__PIPELINE__OWNER: ${{ github.repository_owner }}
