@@ -42,7 +42,7 @@ jobs:
             llm='OPENAI'
             # --todo
             token="${{ secrets.OPENROUTER_API_TOKEN }}"
-          if [ "${{ inputs.provider }}" = "PGSGROVE" ]; then 
+          elif [ "${{ inputs.provider }}" = "PGSGROVE" ]; then 
             val="${{ secrets.PGSGROVE_ENDPOINT }}"
             llm='OPENAI'
             # --todo
