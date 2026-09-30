@@ -25,7 +25,15 @@ on:
         description: 'Select model'
         required: true
         default: 'qwen2.5-coder:14b'
-        type: string    
+        type: string 
+      per_page:
+        type: string
+        required: true 
+        default: '30'
+      max_pages:
+        type: string
+        required: true 
+        default: '5'  
 jobs:
   ai-review:
     runs-on: ubuntu-latest
@@ -135,8 +143,8 @@ jobs:
           VCS__PIPELINE__PULL_NUMBER: ${{ inputs.pull-request-number }}
           VCS__HTTP_CLIENT__API_URL: "https://api.github.com"
           VCS__HTTP_CLIENT__API_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
-          VCS__PAGINATION__PER_PAGE: "30"
-          VCS__PAGINATION__MAX_PAGES: "5"
+          VCS__PAGINATION__PER_PAGE: ${{ inputs.per_page }}
+          VCS__PAGINATION__MAX_PAGES: ${{ inputs.max_pages }}
 
           AGENT__ENABLED: ${{ inputs.agent-mode }}
           AGENT__MAX_ITERATIONS: "25"
