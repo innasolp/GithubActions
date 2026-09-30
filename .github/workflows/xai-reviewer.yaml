@@ -65,7 +65,7 @@ on:
 jobs:  
           
   ai-review-openai:   
-     uses : innasolp/GithubActions/.github/workflows/nikita-filonov-ai-review.yaml@40-add-pagination-parameters-to-inputs
+     uses : innasolp/GithubActions/.github/workflows/nikita-filonov-ai-review.yaml@main
      with:
        agent-mode: ${{ inputs.agent_mode }}
        rg_enabled: ${{ inputs.rg_enabled }}
