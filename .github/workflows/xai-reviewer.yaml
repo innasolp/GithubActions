@@ -22,7 +22,6 @@ on:
         options:
           - 'LLAMA'
           - 'OPENROUTER' 
-          - 'OLLAMA'  
           - 'OLLAMA' 
           - 'PGSGROVE'
           - 'GPTUNNEL'
