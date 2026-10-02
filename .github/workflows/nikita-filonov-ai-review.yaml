@@ -42,13 +42,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout Actions Repo
+        uses: actions/checkout@v4
+        with:
+          repository: innasolp/GithubActions
+          ref: 45-implement-action-for-llm-api-choice
+          path: custom-actions 
+          token: ${{ secrets.GITHUB_TOKEN_WITH_REPO_ACCESS }} 
+
       - name: Prepare API
         id: get_api_step
-        uses: innasolp/GithubActions/.github/actions/prepare-llm-api@45-implement-action-for-llm-api-choice
+        uses: ./custom-actions/.github/actions/prepare-llm-api 
         with:
           provider: ${{ inputs.provider }}
           model_name: ${{ inputs.model_name }}
-          all_secrets: ${{ toJSON(secrets) }}              
+          all_secrets: ${{ toJSON(secrets) }}           
 
       - name: Connect to Tailscale
         if: inputs.provider == 'LLAMA' || inputs.provider == 'OLLAMA'
