@@ -28,7 +28,7 @@ jobs:
           GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }} 
           PUSH_DEFAULT: ${{ github.event.inputs.push_to_default }}
           PUSH_DEVELOP: ${{ github.event.inputs.push_to_develop }}
-        run: |
+        run: |         
           if [ "$PUSH_DEFAULT" != "true" ] && [ "$PUSH_DEVELOP" != "true" ]; then
             echo "❌ Error: No branch for push."
             exit 1
@@ -36,9 +36,11 @@ jobs:
 
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
           git config --global url."https://x-access-token:${{ secrets.REPO_ACTION_TOKEN }}@github.com/".insteadOf "https://github.com"
           
           repos=("Alchemist" "WebLoaders" "Messages" "Import" "LogExtensions" "DependencyInjection" "HttpExtensions" "Configuration" "GrpcExtension" "Json.CustomSerialization")
+
           FILE_PATH="${{ github.event.inputs.action_yaml }}"
 
           for repo in "${repos[@]}"; do
@@ -52,13 +54,14 @@ jobs:
             default_branch=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
             echo "📍 Default branch: $default_branch"
 
+            attr_rule="*.{yaml,yml} linguist-generated=true"
+
             # ==========================================
             # 1. ОБНОВЛЕНИЕ DEFAULT BRANCH
             # ==========================================
             if [ "$PUSH_DEFAULT" == "true" ]; then
               echo "➡️ Processing $default_branch..."
               
-              attr_rule="*.{yaml,yml} linguist-generated=true"
               if ! grep -qsF "$attr_rule" .gitattributes 2>/dev/null; then
                 echo "$attr_rule" >> .gitattributes
               fi
@@ -66,10 +69,11 @@ jobs:
               mkdir -p "$TARGET_DIR"
               cp "../$FILE_PATH" "./$FILE_PATH"
 
+              # Добавлен флаг --force для обхода ошибки .gitignore
               git add --force .gitattributes "$FILE_PATH"
               
               if [ -n "$(git status --porcelain)" ]; then
-                git commit -m "chore: distribute global action to $default_branch"
+                git commit -m "chore: distribute global action and hide it from agents"
                 git push origin "$default_branch"
                 echo "🚀 Pushing to $default_branch completed successfully."
               else
@@ -81,17 +85,14 @@ jobs:
             # 2. ОБНОВЛЕНИЕ DEVELOP BRANCH
             # ==========================================
             if [ "$PUSH_DEVELOP" == "true" ]; then
-              # Надежный способ проверить, есть ли ветка на сервере (без grep)
               has_develop=$(git ls-remote --heads origin develop)
 
               if [ -n "$has_develop" ]; then
                 echo "➡️ Processing develop..."
                 
-                # Скачиваем develop и переключаемся на нее (сбрасывая локальные изменения, если они были)
                 git fetch origin develop
                 git checkout -B develop origin/develop
                 
-                # Применяем изменения файла заново, уже находясь в ветке develop
                 if ! grep -qsF "$attr_rule" .gitattributes 2>/dev/null; then
                   echo "$attr_rule" >> .gitattributes
                 fi
@@ -99,10 +100,11 @@ jobs:
                 mkdir -p "$TARGET_DIR"
                 cp "../$FILE_PATH" "./$FILE_PATH"
 
-                git add .gitattributes "$FILE_PATH"
+                # Добавлен флаг --force для обхода ошибки .gitignore
+                git add --force .gitattributes "$FILE_PATH"
                 
                 if [ -n "$(git status --porcelain)" ]; then
-                  git commit -m "chore: distribute global action to develop"
+                  git commit -m "chore: distribute global action to develop and hide it from agents"
                   git push origin develop
                   echo "🚀 Pushing to develop completed successfully"
                 else
