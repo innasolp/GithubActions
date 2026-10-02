@@ -44,55 +44,11 @@ jobs:
 
       - name: Prepare API
         id: get_api_step
-        run: |
-          if [ "${{ inputs.provider }}" = "OPENROUTER" ]; then 
-            val="${{ secrets.OPENROUTER_ENDPOINT }}"
-            llm='OPENAI'
-            # --todo
-            token="${{ secrets.OPENROUTER_API_TOKEN }}"
-          elif [ "${{ inputs.provider }}" = "PGSGROVE" ]; then 
-            val="${{ secrets.PGSGROVE_ENDPOINT }}"
-            llm='OPENAI'
-            # --todo
-            token="${{ secrets.PGSGROVE_API_TOKEN }}"  
-          elif [ "${{ inputs.provider }}" = "GPTUNNEL" ]; then 
-            val="${{ secrets.GPTUNNEL_ENDPOINT }}"
-            llm='OPENAI'
-            # --todo
-            token="${{ secrets.GPTUNNEL_API_TOKEN }}"  
-          elif [ "${{ inputs.provider }}" = "AITUNNEL" ]; then 
-            val="${{ secrets.AITUNNEL_ENDPOINT }}"
-            llm='OPENAI'
-            # --todo
-            token="${{ secrets.AITUNNEL_API_TOKEN }}"  
-          elif [ "${{ inputs.provider }}" = "LLAMA" ]; then
-            val="${{ secrets.LLAMA_ENDPOINT }}"
-            # val="http://100.89.249.118:11434"
-            llm='OPENAI'
-            token="not-needed-for-local"
-            gh workflow run llama-check-model.yaml \
-              --repo innasolp/GithubActions \
-              --ref main \
-              -f model_name="${{ inputs.model_name }}"
-            
-          elif [ "${{ inputs.provider }}" = "OLLAMA" ]; then
-            val="${{ secrets.LLAMA_ENDPOINT }}"
-            llm='OLLAMA'
-            token="not-needed-for-local"
-            gh workflow run ollama-check-model.yaml \
-              --repo innasolp/GithubActions \
-              --ref main \
-              -f model_name="${{ inputs.model_name }}"
-          fi
-          
-          echo "api_url=$val" >> $GITHUB_OUTPUT
-          echo "llm_provider=$llm" >> $GITHUB_OUTPUT
-          echo "api_token=$token" >> $GITHUB_OUTPUT
-          
-          echo "Selected API: $val"
-          echo "Provider: $llm"
-        env:
-          GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }}      
+        uses: ./.github/actions/prepare-llm-api
+        with:
+          provider: ${{ inputs.provider }}
+          model_name: ${{ inputs.model_name }}
+          all_secrets: ${{ toJSON(secrets) }}              
 
       - name: Connect to Tailscale
         if: inputs.provider == 'LLAMA' || inputs.provider == 'OLLAMA'
