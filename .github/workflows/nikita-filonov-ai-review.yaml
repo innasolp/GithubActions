@@ -37,6 +37,10 @@ on:
 jobs:
   ai-review:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
         with:
