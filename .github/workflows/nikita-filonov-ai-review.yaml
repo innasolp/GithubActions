@@ -44,7 +44,7 @@ jobs:
 
       - name: Prepare API
         id: get_api_step
-        uses: ./.github/actions/prepare-llm-api
+        uses: innasolp/GithubActions/.github/actions/prepare-llm-api@45-implement-action-for-llm-api-choice
         with:
           provider: ${{ inputs.provider }}
           model_name: ${{ inputs.model_name }}
