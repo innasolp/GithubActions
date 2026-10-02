@@ -48,7 +48,7 @@ jobs:
           repository: innasolp/GithubActions
           ref: 45-implement-action-for-llm-api-choice
           path: custom-actions 
-          token: ${{ secrets.GITHUB_TOKEN_WITH_REPO_ACCESS }} 
+          token: ${{ secrets.REPO_ACTION_TOKEN }} 
 
       - name: Prepare API
         id: get_api_step
