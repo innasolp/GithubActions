@@ -99,6 +99,8 @@ jobs:
                 else
                   echo "ℹ️ Branch develop not found. Skipped."
                 fi
+              else
+                echo "ℹ️ Pushing to develop not selected. Skipped."
               fi
             else
               echo "ℹ️ No changes, all files are actual."
