@@ -50,6 +50,20 @@ jobs:
           path: custom-actions 
           token: ${{ secrets.REPO_ACTION_TOKEN }} 
 
+      - name: Debug - List files
+        run: |
+          echo "=== Что лежит в корне скачанного репозитория? ==="
+          ls -la custom-actions/
+          
+          echo "=== Что лежит в папке .github? ==="
+          ls -la custom-actions/.github/ || echo "Папка .github не найдена"
+          
+          echo "=== Что лежит в папке actions? ==="
+          ls -la custom-actions/.github/actions/ || echo "Папка actions не найдена"
+          
+          echo "=== Что внутри папки prepare-llm-api? ==="
+          ls -la custom-actions/.github/actions/prepare-llm-api/ || echo "Папка prepare-llm-api не найдена"    
+
       - name: Prepare API
         id: get_api_step
         uses: ./custom-actions/.github/actions/prepare-llm-api 
