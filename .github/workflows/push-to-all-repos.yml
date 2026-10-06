@@ -35,11 +35,13 @@ jobs:
           fi
 
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@://github.com"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           git config --global url."https://x-access-token:${{ secrets.REPO_ACTION_TOKEN }}@github.com/".insteadOf "https://github.com"
           
           repos=("Alchemist" "WebLoaders" "Messages" "Import" "LogExtensions" "DependencyInjection" "HttpExtensions" "Configuration" "GrpcExtension" "Json.CustomSerialization")
+
+          FILE_PATH="${{ github.event.inputs.action_yaml }}"
 
           for repo in "${repos[@]}"; do
             echo "--------------------------------------------------"
@@ -48,64 +50,73 @@ jobs:
             gh repo clone "$repo" "temp-$repo" || { echo "❌ Cloning $repo failed"; continue; }
             cd "temp-$repo"
 
-            attr_rule="*.{yaml,yml} linguist-generated=true"
-            if [ -f .gitattributes ]; then
-              if ! grep -qsF "$attr_rule" .gitattributes; then
-                echo "$attr_rule" >> .gitattributes
-              fi
-            else
-              echo "$attr_rule" > .gitattributes
-            fi
-
-            # 1. Записываем инпут в переменную
-            FILE_PATH="${{ github.event.inputs.action_yaml }}"
-            
-            # 2. Вычисляем папку, в которую нужно положить файл внутри целевого репозитория
             TARGET_DIR=$(dirname "$FILE_PATH")
-            
-            # 3. Создаем эту папку прямо здесь (в целевом репозитории)
-            mkdir -p "$TARGET_DIR"
-            
-            # 4. Копируем файл ИЗ центрального репозитория (он уровнем выше: ../) 
-            # В текущую папку целевого репозитория (./)
-            cp "../$FILE_PATH" "./$FILE_PATH"
-
-            default_branch=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
+            default_branch=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
             echo "📍 Default branch: $default_branch"
 
-            has_develop=$(git branch -r | grep "origin/develop$")
+            attr_rule="*.{yaml,yml} linguist-generated=true"
 
-            git add .gitattributes ${{ github.event.inputs.action_yaml }}
-            
-            if [ -n "$(git status --porcelain)" ]; then
-              git commit -m "chore: distribute global action and hide it from agents"
+            # ==========================================
+            # 1. ОБНОВЛЕНИЕ DEFAULT BRANCH
+            # ==========================================
+            if [ "$PUSH_DEFAULT" == "true" ]; then
+              echo "➡️ Processing $default_branch..."
               
-              if [ "$PUSH_DEFAULT" == "true" ]; then
-                git push origin "$default_branch"
-                echo "🚀 Pushing to $default_branch  completed successfully."
+              if ! grep -qsF "$attr_rule" .gitattributes 2>/dev/null; then
+                echo "$attr_rule" >> .gitattributes
               fi
 
-              if [ "$PUSH_DEVELOP" == "true" ]; then
-                if [ -n "$has_develop" ]; then
-                  git fetch origin develop
-                  git checkout develop
-                  if git merge "$default_branch" -m "chore: merge action from $default_branch"; then
-                    git push origin develop
-                    echo "🚀 Pushing to develop completed successfully"
-                  else
-                    echo "❌ Merge into develop failed! Continued."
-                    git merge --abort
-                  fi
-                else
-                  echo "ℹ️ Branch develop not found. Skipped."
-                fi
+              mkdir -p "$TARGET_DIR"
+              cp "../$FILE_PATH" "./$FILE_PATH"
+
+              # Добавлен флаг --force для обхода ошибки .gitignore
+              git add --force .gitattributes "$FILE_PATH"
+              
+              if [ -n "$(git status --porcelain)" ]; then
+                git commit -m "chore: distribute global action and hide it from agents"
+                git push origin "$default_branch"
+                echo "🚀 Pushing to $default_branch completed successfully."
+              else
+                echo "ℹ️ No changes for $default_branch, files are actual."
               fi
-            else
-              echo "ℹ️ No changes, all files are actual."
+            fi
+
+            # ==========================================
+            # 2. ОБНОВЛЕНИЕ DEVELOP BRANCH
+            # ==========================================
+            if [ "$PUSH_DEVELOP" == "true" ]; then
+              has_develop=$(git ls-remote --heads origin develop)
+
+              if [ -n "$has_develop" ]; then
+                echo "➡️ Processing develop..."
+                
+                git fetch origin develop
+                git checkout -B develop origin/develop
+                
+                if ! grep -qsF "$attr_rule" .gitattributes 2>/dev/null; then
+                  echo "$attr_rule" >> .gitattributes
+                fi
+
+                mkdir -p "$TARGET_DIR"
+                cp "../$FILE_PATH" "./$FILE_PATH"
+
+                # Добавлен флаг --force для обхода ошибки .gitignore
+                git add --force .gitattributes "$FILE_PATH"
+                
+                if [ -n "$(git status --porcelain)" ]; then
+                  git commit -m "chore: distribute global action to develop and hide it from agents"
+                  git push origin develop
+                  echo "🚀 Pushing to develop completed successfully"
+                else
+                  echo "ℹ️ No changes for develop, files are actual."
+                fi
+              else
+                echo "ℹ️ Branch develop not found on origin. Skipped."
+              fi
             fi
 
             cd ..
             rm -rf "temp-$repo"
           done
 
-          echo "🎉 All repoitories handled successfully."
+          echo "🎉 All repositories handled successfully."
