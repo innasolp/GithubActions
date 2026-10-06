@@ -65,6 +65,10 @@ jobs:
           
   ai-review-openai:   
      uses : innasolp/GithubActions/.github/workflows/nikita-filonov-ai-review.yaml@main
+     permissions:
+      pull-requests: write
+      issues: write
+      contents: read
      with:
        agent-mode: ${{ inputs.agent_mode }}
        rg_enabled: ${{ inputs.rg_enabled }}
