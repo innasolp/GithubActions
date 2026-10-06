@@ -1,0 +1,68 @@
+name: 'Prepare API'
+description: 'Определяет URL API, провайдера и токен'
+
+inputs:
+  provider:
+    required: true
+  model_name:
+    required: false
+  all_secrets:
+    description: 'JSON with all secrets'
+    required: true
+
+outputs:
+  api_url:
+    description: 'Selected API endpoint'
+    value: ${{ steps.get_api.outputs.api_url }}
+  llm_provider:
+    description: 'Selected LLM provider'
+    value: ${{ steps.get_api.outputs.llm_provider }}
+  api_token:
+    description: 'Selected API token'
+    value: ${{ steps.get_api.outputs.api_token }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Prepare API
+      id: get_api
+      shell: bash
+      run: |
+        SECRETS='${{ inputs.all_secrets }}'
+        PROVIDER="${{ inputs.provider }}"
+        
+        get_secret() {
+          echo "$SECRETS" | jq -r ".$1"
+        }
+
+        if [ "$PROVIDER" = "OPENROUTER" ]; then 
+          val=$(get_secret "OPENROUTER_ENDPOINT")
+          token=$(get_secret "OPENROUTER_API_TOKEN")
+          llm='OPENAI'
+        elif [ "$PROVIDER" = "PGSGROVE" ]; then 
+          val=$(get_secret "PGSGROVE_ENDPOINT")
+          token=$(get_secret "PGSGROVE_API_TOKEN")
+          llm='OPENAI'
+        elif [ "$PROVIDER" = "GPTUNNEL" ]; then 
+          val=$(get_secret "GPTUNNEL_ENDPOINT")
+          token=$(get_secret "GPTUNNEL_API_TOKEN")
+          llm='OPENAI'
+        elif [ "$PROVIDER" = "AITUNNEL" ]; then 
+          val=$(get_secret "AITUNNEL_ENDPOINT")
+          token=$(get_secret "AITUNNEL_API_TOKEN")
+          llm='OPENAI'
+        elif [ "$PROVIDER" = "LLAMA" ]; then
+          val=$(get_secret "LLAMA_ENDPOINT")
+          llm='OPENAI'
+          token="not-needed-for-local"
+          GH_TOKEN=$(get_secret "REPO_ACTION_TOKEN") gh workflow run llama-check-model.yaml --repo innasolp/GithubActions --ref main -f model_name="${{ inputs.model_name }}"
+        elif [ "$PROVIDER" = "OLLAMA" ]; then
+          val=$(get_secret "LLAMA_ENDPOINT")
+          llm='OLLAMA'
+          token="not-needed-for-local"
+          GH_TOKEN=$(get_secret "REPO_ACTION_TOKEN") gh workflow run ollama-check-model.yaml --repo innasolp/GithubActions --ref main -f model_name="${{ inputs.model_name }}"
+        fi
+        
+        echo "api_url=$val" >> $GITHUB_OUTPUT
+        echo "llm_provider=$llm" >> $GITHUB_OUTPUT
+        echo "api_token=$token" >> $GITHUB_OUTPUT
