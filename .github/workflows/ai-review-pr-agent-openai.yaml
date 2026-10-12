@@ -63,7 +63,7 @@ jobs:
           
       - name: Prepare API
         id: get_api_step
-        uses: innasolp/GithubActions/custom-actions/.github/actions/prepare_llm_api@main 
+        uses: innasolp/GithubActions/.github/actions/prepare_llm_api@main 
         with:
           provider: ${{ inputs.api }}
           model_name: ${{ inputs.model_name }}
