@@ -63,27 +63,11 @@ jobs:
           
       - name: Prepare API
         id: get_api_step
-        run: |
-          if [ "${{ inputs.api }}" = "OpenRouter" ]; then 
-            val="${{ secrets.OPENROUTER_ENDPOINT }}"
-            # Для OpenRouter оставляем стандартный префикс openai/
-            echo "TARGET_MODEL=openai/${{ inputs.model_name }}" >> $GITHUB_ENV
-          elif [ "${{ inputs.api }}" = "Llama" ]; then
-            # Для локальной Llama дописываем /v1, необходимый для OpenAI-клиента pr-agent
-            val="${{ secrets.LLAMA_ENDPOINT }}/v1"
-            # Для Llama используем префикс custom/, чтобы отключить логику GPT-5 и заставить LiteLLM ждать
-            echo "TARGET_MODEL=custom/${{ inputs.model_name }}" >> $GITHUB_ENV
-            
-            gh workflow run llama-check-model.yaml \
-              --repo innasolp/GithubActions \
-              --ref main \
-              -f model_name="${{ inputs.model_name }}"
-          fi
-          
-          echo "API_URL=$val" >> $GITHUB_ENV
-          echo "Selected API: $val"
-        env:
-          GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }}
+        uses: ./custom-actions/.github/actions/prepare_llm_api 
+        with:
+          provider: ${{ inputs.api }}
+          model_name: ${{ inputs.model_name }}
+          all_secrets: ${{ toJSON(secrets) }}
 
       - name: Connect to Tailscale
         if: inputs.api == 'Llama'
