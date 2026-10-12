@@ -84,8 +84,8 @@ jobs:
       - name: PR Agent - Description & Changes
         run: |
           export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          export OPENAI__API_BASE="$API_URL"
-          export OPENAI__API_KEY="dummy-key-for-local"
+          export OPENAI__API_BASE=${{ steps.get_api_step.outputs.api_url }}
+          export OPENAI__API_KEY=${{ steps.get_api_step.outputs.api_token }}
           
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
@@ -123,8 +123,8 @@ jobs:
       - name: PR Agent - Bug Analysis
         run: |
           export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          export OPENAI__API_BASE="$API_URL"
-          export OPENAI__API_KEY="dummy-key-for-local"
+          export OPENAI__API_BASE=${{ steps.get_api_step.outputs.api_url }}
+          export OPENAI__API_KEY=${{ steps.get_api_step.outputs.api_token }}
           
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
