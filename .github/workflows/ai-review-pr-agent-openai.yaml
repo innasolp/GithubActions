@@ -108,6 +108,7 @@ jobs:
           # Передаем токены через параметры --config
           pr-agent \
             --config "config.model=$FINAL_MODEL_NAME" \
+            --config "pr_questions.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
             --config "openai.reasoning_effort=null" \
@@ -146,6 +147,7 @@ jobs:
 
           pr-agent \
             --config "config.model=$FINAL_MODEL_NAME" \
+            --config "pr_questions.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
             --config "openai.reasoning_effort=null" \
