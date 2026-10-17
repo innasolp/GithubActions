@@ -10,10 +10,10 @@ on:
       api:
         description: 'Select api'
         required: true
-        default: 'Llama'
+        default: 'LLAMA'
         type: choice
         options:
-          - 'Llama'
+          - 'LLAMA'
           - 'OPENROUTER' 
           - 'OLLAMA' 
           - 'PGSGROVE'
@@ -44,7 +44,7 @@ on:
 jobs:  
           
   ai-review-openai:      
-     if: ${{ inputs.api != 'Ollama'}} 
+     if: ${{ inputs.api != 'OLLAMA'}} 
      uses : innasolp/GithubActions/.github/workflows/ai-review-pr-agent-openai.yaml@main
      with:
        pr_number: ${{ inputs.pr_number }}
@@ -54,7 +54,7 @@ jobs:
      secrets: inherit 
      
   ai-review-ollama:      
-      if: ${{ inputs.api == 'Ollama'}} 
+      if: ${{ inputs.api == 'OLLAMA'}} 
       uses : innasolp/GithubActions/.github/workflows/ai-review-pr-agent-ollama.yaml@main
       with:
         pr_number: ${{ inputs.pr_number }}
