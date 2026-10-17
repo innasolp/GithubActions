@@ -83,6 +83,9 @@ jobs:
 
       - name: PR Agent - Description & Changes
         run: |
+          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          export OPENAI__API_BASE="${{ steps.get_api_step.outputs.api_url }}"
+          export OPENAI__API_KEY="${{ steps.get_api_step.outputs.api_token }}"
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
@@ -102,9 +105,6 @@ jobs:
 
           # Передаем токены через параметры --config
           pr-agent \
-            --config "github.user_token=${{ secrets.GITHUB_TOKEN }}" \
-            --config "openai.api_base=${{ steps.get_api_step.outputs.api_url }}" \
-            --config "openai.key=${{ steps.get_api_step.outputs.api_token }}" \
             --config "config.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
@@ -121,6 +121,9 @@ jobs:
        
       - name: PR Agent - Bug Analysis
         run: |
+          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          export OPENAI__API_BASE="${{ steps.get_api_step.outputs.api_url }}"
+          export OPENAI__API_KEY="${{ steps.get_api_step.outputs.api_token }}"
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
@@ -139,9 +142,6 @@ jobs:
           echo "Отправка запроса анализа багов для модели: $FINAL_MODEL_NAME"
 
           pr-agent \
-            --config "github.user_token=${{ secrets.GITHUB_TOKEN }}" \
-            --config "openai.api_base=${{ steps.get_api_step.outputs.api_url }}" \
-            --config "openai.key=${{ steps.get_api_step.outputs.api_token }}" \
             --config "config.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
