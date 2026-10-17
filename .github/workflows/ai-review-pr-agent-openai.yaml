@@ -79,7 +79,7 @@ jobs:
           
       - name: Install PR-Agent natively
         run: |
-          pip install pr-agent
+          pip install 'pr-agent[github]'
 
       - name: PR Agent - Description & Changes
         run: |
