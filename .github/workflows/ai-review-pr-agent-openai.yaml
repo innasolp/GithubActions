@@ -105,19 +105,17 @@ jobs:
 
           echo "Отправка запроса для модели: $FINAL_MODEL_NAME"
 
+          export PR_AGENT_CONFIG__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_QUESTIONS__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_REVIEWER__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_DESCRIPTION__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_CONFIG__FALLBACK_MODELS="[]"
+          export PR_AGENT_CONFIG__AI_TIMEOUT="1200"
+
           # Передаем токены через параметры --config
           pr-agent \
-            --config "config.model=$FINAL_MODEL_NAME" \
-            --config "pr_questions.model=$FINAL_MODEL_NAME" \
-            --config "config.ai_timeout=1200" \
-            --config "openai.timeout=1200" \
-            --config "openai.reasoning_effort=null" \
-            --config "litellm.reasoning_effort=null" \
             --config "config.custom_model_max_context_tokens=32000" \
             --config "config.custom_model_max_tokens=4000" \
-            --config "config.fallback_models=[]" \
-            --config "openai.fallback_models=[]" \
-            --config "litellm.fallback_models=[]" \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
 
@@ -145,17 +143,15 @@ jobs:
 
           echo "Отправка запроса анализа багов для модели: $FINAL_MODEL_NAME"
 
+          export PR_AGENT_CONFIG__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_QUESTIONS__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_REVIEWER__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_DESCRIPTION__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_CONFIG__FALLBACK_MODELS="[]"
+          export PR_AGENT_CONFIG__AI_TIMEOUT="1200"
+
           pr-agent \
-            --config "config.model=$FINAL_MODEL_NAME" \
-            --config "pr_questions.model=$FINAL_MODEL_NAME" \
-            --config "config.ai_timeout=1200" \
-            --config "openai.timeout=1200" \
-            --config "openai.reasoning_effort=null" \
-            --config "litellm.reasoning_effort=null" \
             --config "config.custom_model_max_context_tokens=32000" \
             --config "config.custom_model_max_tokens=4000" \
-            --config "config.fallback_models=[]" \
-            --config "openai.fallback_models=[]" \
-            --config "litellm.fallback_models=[]" \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."
