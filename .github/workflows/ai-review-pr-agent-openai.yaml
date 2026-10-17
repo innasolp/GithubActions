@@ -85,7 +85,9 @@ jobs:
         run: |
           export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           export OPENAI__API_BASE="${{ steps.get_api_step.outputs.api_url }}"
-          export OPENAI__API_KEY="${{ steps.get_api_step.outputs.api_token }}"
+          export OPENAI__KEY="${{ steps.get_api_step.outputs.api_token }}"
+          export OPENAI_API_BASE="${{ steps.get_api_step.outputs.api_url }}"
+          export OPENAI_API_KEY="${{ steps.get_api_step.outputs.api_token }}"
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
@@ -123,8 +125,9 @@ jobs:
         run: |
           export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           export OPENAI__API_BASE="${{ steps.get_api_step.outputs.api_url }}"
-          export OPENAI__API_KEY="${{ steps.get_api_step.outputs.api_token }}"
-          export HTTP_PROXY=""
+          export OPENAI__KEY="${{ steps.get_api_step.outputs.api_token }}"
+          export OPENAI_API_BASE="${{ steps.get_api_step.outputs.api_url }}"
+          export OPENAI_API_KEY="${{ steps.get_api_step.outputs.api_token }}"export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
           export https_proxy=""
