@@ -70,7 +70,7 @@ jobs:
           all_secrets: ${{ toJSON(secrets) }}
 
       - name: Connect to Tailscale
-        if: inputs.api == 'Llama'
+        if: inputs.api == 'LLAMA'
         uses: tailscale/github-action@v2
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -83,10 +83,6 @@ jobs:
 
       - name: PR Agent - Description & Changes
         run: |
-          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          export OPENAI__API_BASE=${{ steps.get_api_step.outputs.api_url }}
-          export OPENAI__API_KEY=${{ steps.get_api_step.outputs.api_token }}
-          
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
@@ -94,18 +90,21 @@ jobs:
           export NO_PROXY="localhost,127.0.0.1,100.*"
           export no_proxy="localhost,127.0.0.1,100.*"
           
-          # Убираем двоеточие (заменяем на дефис) только если выбрана Llama
-          if [ "${{ inputs.api }}" = "Llama" ]; then
+          # Убираем двоеточие (заменяем на дефис)
+          if [ "${{ inputs.api }}" = "LLAMA" ] || [ "${{ inputs.api }}" = "LLAMA" ]; then
             SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
             FINAL_MODEL_NAME="openai/$SAFE_NAME"
           else
-            # Для OpenRouter оставляем оригинальное имя с двоеточием
             FINAL_MODEL_NAME="openai/${{ inputs.model_name }}"
           fi
 
           echo "Отправка запроса для модели: $FINAL_MODEL_NAME"
 
+          # Передаем токены через параметры --config
           pr-agent \
+            --config "github.user_token=${{ secrets.GITHUB_TOKEN }}" \
+            --config "openai.api_base=${{ steps.get_api_step.outputs.api_url }}" \
+            --config "openai.key=${{ steps.get_api_step.outputs.api_token }}" \
             --config "config.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
@@ -122,10 +121,6 @@ jobs:
        
       - name: PR Agent - Bug Analysis
         run: |
-          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          export OPENAI__API_BASE=${{ steps.get_api_step.outputs.api_url }}
-          export OPENAI__API_KEY=${{ steps.get_api_step.outputs.api_token }}
-          
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
@@ -134,7 +129,7 @@ jobs:
           export no_proxy="localhost,127.0.0.1,100.*"
           
           # Точно так же убираем двоеточие для локальной Llama
-          if [ "${{ inputs.api }}" = "Llama" ]; then
+          if [ "${{ inputs.api }}" = "LLAMA" ]; then
             SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
             FINAL_MODEL_NAME="openai/$SAFE_NAME"
           else
@@ -144,6 +139,9 @@ jobs:
           echo "Отправка запроса анализа багов для модели: $FINAL_MODEL_NAME"
 
           pr-agent \
+            --config "github.user_token=${{ secrets.GITHUB_TOKEN }}" \
+            --config "openai.api_base=${{ steps.get_api_step.outputs.api_url }}" \
+            --config "openai.key=${{ steps.get_api_step.outputs.api_token }}" \
             --config "config.model=$FINAL_MODEL_NAME" \
             --config "config.ai_timeout=1200" \
             --config "openai.timeout=1200" \
