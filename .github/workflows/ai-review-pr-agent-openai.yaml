@@ -83,11 +83,6 @@ jobs:
 
       - name: PR Agent - Description & Changes
         run: |
-          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          export OPENAI__API_BASE="${{ steps.get_api_step.outputs.api_url }}"
-          export OPENAI__KEY="${{ steps.get_api_step.outputs.api_token }}"
-          export OPENAI_API_BASE="${{ steps.get_api_step.outputs.api_url }}"
-          export OPENAI_API_KEY="${{ steps.get_api_step.outputs.api_token }}"
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
@@ -95,8 +90,7 @@ jobs:
           export NO_PROXY="localhost,127.0.0.1,100.*"
           export no_proxy="localhost,127.0.0.1,100.*"
           
-          # Убираем двоеточие (заменяем на дефис)
-          if [ "${{ inputs.api }}" = "LLAMA" ] || [ "${{ inputs.api }}" = "LLAMA" ]; then
+          if [ "${{ inputs.api }}" = "Llama" ] || [ "${{ inputs.api }}" = "LLAMA" ]; then
             SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
             FINAL_MODEL_NAME="openai/$SAFE_NAME"
           else
@@ -105,17 +99,39 @@ jobs:
 
           echo "Отправка запроса для модели: $FINAL_MODEL_NAME"
 
-          export PR_AGENT_CONFIG__MODEL="$FINAL_MODEL_NAME"
-          export PR_AGENT_PR_QUESTIONS__MODEL="$FINAL_MODEL_NAME"
-          export PR_AGENT_PR_REVIEWER__MODEL="$FINAL_MODEL_NAME"
-          export PR_AGENT_PR_DESCRIPTION__MODEL="$FINAL_MODEL_NAME"
-          export PR_AGENT_CONFIG__FALLBACK_MODELS="[]"
-          export PR_AGENT_CONFIG__AI_TIMEOUT="1200"
+          # Создаем файл настроек, который PR-Agent безуспешно пытается найти в логах
+          SETTINGS_DIR="/home/runner/.local/lib/python3.12/site-packages/pr_agent/settings"
+          mkdir -p "$SETTINGS_DIR"
+          
+          cat <<EOF > "$SETTINGS_DIR/.secrets.toml"
+          [config]
+          model="$FINAL_MODEL_NAME"
+          fallback_models=[]
+          ai_timeout=1200
+          custom_model_max_context_tokens=32000
+          custom_model_max_tokens=4000
+          
+          [pr_questions]
+          model="$FINAL_MODEL_NAME"
+          fallback_models=[]
+          
+          [pr_reviewer]
+          model="$FINAL_MODEL_NAME"
+          
+          [pr_description]
+          model="$FINAL_MODEL_NAME"
 
-          # Передаем токены через параметры --config
+          [openai]
+          key="${{ steps.get_api_step.outputs.api_token }}"
+          api_base="${{ steps.get_api_step.outputs.api_url }}"
+          timeout=1200
+          
+          [github]
+          user_token="${{ secrets.GITHUB_TOKEN }}"
+          EOF
+
+          # Теперь запускаем pr-agent максимально чисто, без флагов конфигурации
           pr-agent \
-            --config "config.custom_model_max_context_tokens=32000" \
-            --config "config.custom_model_max_tokens=4000" \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
 
