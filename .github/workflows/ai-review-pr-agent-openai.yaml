@@ -63,30 +63,14 @@ jobs:
           
       - name: Prepare API
         id: get_api_step
-        run: |
-          if [ "${{ inputs.api }}" = "OpenRouter" ]; then 
-            val="${{ secrets.OPENROUTER_ENDPOINT }}"
-            # Для OpenRouter оставляем стандартный префикс openai/
-            echo "TARGET_MODEL=openai/${{ inputs.model_name }}" >> $GITHUB_ENV
-          elif [ "${{ inputs.api }}" = "Llama" ]; then
-            # Для локальной Llama дописываем /v1, необходимый для OpenAI-клиента pr-agent
-            val="${{ secrets.LLAMA_ENDPOINT }}/v1"
-            # Для Llama используем префикс custom/, чтобы отключить логику GPT-5 и заставить LiteLLM ждать
-            echo "TARGET_MODEL=custom/${{ inputs.model_name }}" >> $GITHUB_ENV
-            
-            gh workflow run llama-check-model.yaml \
-              --repo innasolp/GithubActions \
-              --ref main \
-              -f model_name="${{ inputs.model_name }}"
-          fi
-          
-          echo "API_URL=$val" >> $GITHUB_ENV
-          echo "Selected API: $val"
-        env:
-          GH_TOKEN: ${{ secrets.REPO_ACTION_TOKEN }}
+        uses: innasolp/GithubActions/.github/actions/prepare_llm_api@main 
+        with:
+          provider: ${{ inputs.api }}
+          model_name: ${{ inputs.model_name }}
+          all_secrets: ${{ toJSON(secrets) }}
 
       - name: Connect to Tailscale
-        if: inputs.api == 'Llama'
+        if: inputs.api == 'LLAMA'
         uses: tailscale/github-action@v2
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -95,14 +79,10 @@ jobs:
           
       - name: Install PR-Agent natively
         run: |
-          pip install pr-agent
+          pip install 'pr-agent[github]'
 
       - name: PR Agent - Description & Changes
         run: |
-          export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          export OPENAI__API_BASE="$API_URL"
-          export OPENAI__API_KEY="dummy-key-for-local"
-          
           export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
@@ -110,28 +90,48 @@ jobs:
           export NO_PROXY="localhost,127.0.0.1,100.*"
           export no_proxy="localhost,127.0.0.1,100.*"
           
-          # Убираем двоеточие (заменяем на дефис) только если выбрана Llama
-          if [ "${{ inputs.api }}" = "Llama" ]; then
+          if [ "${{ inputs.api }}" = "Llama" ] || [ "${{ inputs.api }}" = "LLAMA" ]; then
             SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
             FINAL_MODEL_NAME="openai/$SAFE_NAME"
           else
-            # Для OpenRouter оставляем оригинальное имя с двоеточием
             FINAL_MODEL_NAME="openai/${{ inputs.model_name }}"
           fi
 
           echo "Отправка запроса для модели: $FINAL_MODEL_NAME"
 
+          # Создаем файл настроек, который PR-Agent безуспешно пытается найти в логах
+          SETTINGS_DIR="/home/runner/.local/lib/python3.12/site-packages/pr_agent/settings"
+          mkdir -p "$SETTINGS_DIR"
+          
+          cat <<EOF > "$SETTINGS_DIR/.secrets.toml"
+          [config]
+          model="$FINAL_MODEL_NAME"
+          fallback_models=[]
+          ai_timeout=1200
+          custom_model_max_context_tokens=32000
+          custom_model_max_tokens=4000
+          
+          [pr_questions]
+          model="$FINAL_MODEL_NAME"
+          fallback_models=[]
+          
+          [pr_reviewer]
+          model="$FINAL_MODEL_NAME"
+          
+          [pr_description]
+          model="$FINAL_MODEL_NAME"
+
+          [openai]
+          key="${{ steps.get_api_step.outputs.api_token }}"
+          api_base="${{ steps.get_api_step.outputs.api_url }}"
+          timeout=1200
+          
+          [github]
+          user_token="${{ secrets.GITHUB_TOKEN }}"
+          EOF
+
+          # Теперь запускаем pr-agent максимально чисто, без флагов конфигурации
           pr-agent \
-            --config "config.model=$FINAL_MODEL_NAME" \
-            --config "config.ai_timeout=1200" \
-            --config "openai.timeout=1200" \
-            --config "openai.reasoning_effort=null" \
-            --config "litellm.reasoning_effort=null" \
-            --config "config.custom_model_max_context_tokens=32000" \
-            --config "config.custom_model_max_tokens=4000" \
-            --config "config.fallback_models=[]" \
-            --config "openai.fallback_models=[]" \
-            --config "litellm.fallback_models=[]" \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "In ${{ inputs.language }}, provide a short summary of the main changes in this PR and describe what it does."
 
@@ -139,10 +139,10 @@ jobs:
       - name: PR Agent - Bug Analysis
         run: |
           export GITHUB__USER_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-          export OPENAI__API_BASE="$API_URL"
-          export OPENAI__API_KEY="dummy-key-for-local"
-          
-          export HTTP_PROXY=""
+          export OPENAI__API_BASE="${{ steps.get_api_step.outputs.api_url }}"
+          export OPENAI__KEY="${{ steps.get_api_step.outputs.api_token }}"
+          export OPENAI_API_BASE="${{ steps.get_api_step.outputs.api_url }}"
+          export OPENAI_API_KEY="${{ steps.get_api_step.outputs.api_token }}"export HTTP_PROXY=""
           export HTTPS_PROXY=""
           export http_proxy=""
           export https_proxy=""
@@ -150,7 +150,7 @@ jobs:
           export no_proxy="localhost,127.0.0.1,100.*"
           
           # Точно так же убираем двоеточие для локальной Llama
-          if [ "${{ inputs.api }}" = "Llama" ]; then
+          if [ "${{ inputs.api }}" = "LLAMA" ]; then
             SAFE_NAME=$(echo "${{ inputs.model_name }}" | sed 's/:/-/g')
             FINAL_MODEL_NAME="openai/$SAFE_NAME"
           else
@@ -159,16 +159,15 @@ jobs:
 
           echo "Отправка запроса анализа багов для модели: $FINAL_MODEL_NAME"
 
+          export PR_AGENT_CONFIG__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_QUESTIONS__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_REVIEWER__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_PR_DESCRIPTION__MODEL="$FINAL_MODEL_NAME"
+          export PR_AGENT_CONFIG__FALLBACK_MODELS="[]"
+          export PR_AGENT_CONFIG__AI_TIMEOUT="1200"
+
           pr-agent \
-            --config "config.model=$FINAL_MODEL_NAME" \
-            --config "config.ai_timeout=1200" \
-            --config "openai.timeout=1200" \
-            --config "openai.reasoning_effort=null" \
-            --config "litellm.reasoning_effort=null" \
             --config "config.custom_model_max_context_tokens=32000" \
             --config "config.custom_model_max_tokens=4000" \
-            --config "config.fallback_models=[]" \
-            --config "openai.fallback_models=[]" \
-            --config "litellm.fallback_models=[]" \
             --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/${{ inputs.pr_number }}" \
             ask "Point out any critical bugs, logical errors, or performance issues in the code changes. Answer ONLY in ${{ inputs.language }} language."
