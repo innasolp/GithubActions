@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: innasolp/GithubActions
-          ref: 45-implement-action-for-llm-api-choice
+          ref: main
           path: custom-actions 
           token: ${{ secrets.REPO_ACTION_TOKEN }} 
 
