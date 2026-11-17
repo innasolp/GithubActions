@@ -51,6 +51,10 @@ runs:
           val=$(get_secret "AITUNNEL_ENDPOINT")
           token=$(get_secret "AITUNNEL_API_TOKEN")
           llm='OPENAI'
+        elif [ "$PROVIDER" = "TEAMO" ]; then 
+          val=$(get_secret "TEAMO_ENDPOINT")
+          token=$(get_secret "TEAMO_API_TOKEN")
+          llm='OPENAI'  
         elif [ "$PROVIDER" = "LLAMA" ]; then
           val=$(get_secret "LLAMA_ENDPOINT")
           llm='OPENAI'
