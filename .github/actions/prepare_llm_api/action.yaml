@@ -57,7 +57,7 @@ runs:
           llm='OPENAI'  
         elif [ "$PROVIDER" = "GOOGLEAI" ]; then 
           val=$(get_secret "GOOGLEAI_ENDPOINT")
-          token=$(get_secret "GOOGLEAI_API_TOKEN")
+          token=$(get_secret "GOOGLEAI_TOKEN")
           llm='OPENAI'
         elif [ "$PROVIDER" = "LLAMA" ]; then
           val=$(get_secret "LLAMA_ENDPOINT")
