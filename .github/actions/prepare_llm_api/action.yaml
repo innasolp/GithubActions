@@ -55,6 +55,10 @@ runs:
           val=$(get_secret "TEAMO_ENDPOINT")
           token=$(get_secret "TEAMO_API_TOKEN")
           llm='OPENAI'  
+        elif [ "$PROVIDER" = "GOOGLEAI" ]; then 
+          val=$(get_secret "GOOGLEAI_ENDPOINT")
+          token=$(get_secret "GOOGLEAI_API_TOKEN")
+          llm='GOOGLEAI'
         elif [ "$PROVIDER" = "LLAMA" ]; then
           val=$(get_secret "LLAMA_ENDPOINT")
           llm='OPENAI'
